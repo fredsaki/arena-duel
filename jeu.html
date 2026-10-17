@@ -1,0 +1,1683 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#07111f">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="Arena Duel : jouez aux Dames et au Ludo contre un ami virtuel, un proche ou un adversaire en ligne.">
+<title>Arena Duel — Dames & Ludo</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E⚔️%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js" defer></script>
+<style>
+/* ============================== BASE ============================== */
+:root{
+  --bg:#07111f; --panel:#0f1c2e; --panel-2:#13243a;
+  --line:rgba(255,255,255,.09); --line-strong:rgba(255,255,255,.16);
+  --text:#f8fafc; --muted:#9fb0c6;
+  --green:#22c55e; --red:#ef4444; --gold:#f59e0b; --blue:#38bdf8;
+  --radius:16px; --radius-lg:24px;
+  --font:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{
+  margin:0;min-height:100vh;min-height:100dvh;color:var(--text);font-family:var(--font);line-height:1.5;
+  background:radial-gradient(1100px 520px at 50% -8%,#17314f 0,transparent 62%),var(--bg);
+  background-attachment:fixed;-webkit-tap-highlight-color:transparent;
+  display:flex;flex-direction:column;
+}
+body.no-scroll{overflow:hidden}
+h1,h2,h3,p{margin:0}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+img,svg,canvas{max-width:100%}
+.hidden{display:none!important}
+.sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.skip-link{position:absolute;left:.75rem;top:-4rem;z-index:300;background:#fff;color:#0f172a;padding:.6rem 1rem;border-radius:10px;font-weight:700;transition:top .15s}
+.skip-link:focus{top:.75rem}
+:focus-visible{outline:3px solid rgba(56,189,248,.75);outline-offset:2px}
+.muted{color:var(--muted)}
+.small{font-size:.8125rem}
+.center{text-align:center}
+.text-green{color:#4ade80}.text-red{color:#f87171}
+.container{width:100%;max-width:1200px;margin-inline:auto;padding-inline:max(1rem,env(safe-area-inset-left)) max(1rem,env(safe-area-inset-right))}
+main{flex:1}
+.screen{padding-block:clamp(1rem,3vw,2rem)}
+
+/* ============================== COMPOSANTS ============================== */
+.card{background:rgba(15,28,46,.88);border:1px solid var(--line);box-shadow:0 18px 50px rgba(0,0,0,.28);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.btn{
+  min-height:44px;border:1px solid var(--line);border-radius:14px;padding:.6rem 1.05rem;font-weight:700;line-height:1.2;
+  display:inline-flex;align-items:center;justify-content:center;gap:.5rem;text-align:center;
+  background:rgba(255,255,255,.05);transition:transform .15s,filter .15s,background .15s,border-color .15s;touch-action:manipulation;
+}
+.btn:hover{filter:brightness(1.12)}
+.btn:active{transform:translateY(1px) scale(.99)}
+.btn:disabled{opacity:.45;cursor:not-allowed;filter:none;transform:none}
+.btn-primary{background:linear-gradient(135deg,#2563eb,#06b6d4);border-color:transparent}
+.btn-green{background:linear-gradient(135deg,#15803d,#22c55e);border-color:transparent}
+.btn-red{background:linear-gradient(135deg,#dc2626,#f43f5e);border-color:transparent}
+.btn-ghost{background:rgba(255,255,255,.05)}
+.btn-block{width:100%}
+.btn-icon{width:44px;padding:0;flex:none}
+.field{
+  width:100%;min-height:46px;background:#081525;border:1px solid rgba(148,163,184,.25);border-radius:12px;
+  padding:.65rem .8rem;color:#fff;font-size:1rem; /* 16px : évite le zoom automatique sur iOS */
+}
+.field:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(56,189,248,.18)}
+.field::placeholder{color:#5f7189}
+.label{display:block;color:#cbd5e1;font-size:.85rem;font-weight:600;margin-bottom:.35rem}
+.form-error{color:#f87171;font-size:.875rem;min-height:1.3rem}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:.85rem}
+.form-stack{display:grid;gap:.9rem}
+.pw{position:relative}
+.pw .field{padding-right:3.2rem}
+.pw-toggle{position:absolute;right:.2rem;top:50%;transform:translateY(-50%);width:44px;height:44px;border:0;border-radius:10px;background:none;color:var(--muted);display:flex;align-items:center;justify-content:center}
+.pw-toggle:hover{color:var(--text)}
+.check{display:flex;gap:.6rem;align-items:flex-start;font-size:.85rem;color:#cbd5e1}
+.check input{width:20px;height:20px;margin-top:2px;flex:none;accent-color:#22c55e}
+.badge{display:inline-flex;align-items:center;gap:.35rem;border-radius:999px;padding:.25rem .7rem;font-size:.75rem;font-weight:700;background:rgba(255,255,255,.08);color:#cbd5e1}
+.stat{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:14px;padding:.7rem .85rem;min-width:0}
+.stat-label{font-size:.75rem;color:var(--muted)}
+.stat b{overflow-wrap:anywhere}
+.section-title{font-size:1.1rem;font-weight:800;margin-bottom:.75rem}
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-block:1.1rem}
+
+/* Toast */
+.toast{
+  position:fixed;left:50%;bottom:calc(1rem + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:400;
+  width:max-content;max-width:min(92vw,420px);background:#0b1728;border:1px solid var(--line-strong);padding:.8rem 1.1rem;
+  border-radius:14px;box-shadow:0 15px 40px rgba(0,0,0,.45);font-size:.9rem;text-align:center;animation:rise .2s ease;
+}
+@keyframes rise{from{transform:translate(-50%,10px);opacity:0}to{transform:translate(-50%,0);opacity:1}}
+
+/* Modales */
+.modal-bg{position:fixed;inset:0;z-index:200;background:rgba(2,6,23,.8);display:flex;align-items:center;justify-content:center;padding:1rem;overflow-y:auto;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+.modal{width:min(560px,100%);max-height:calc(100dvh - 2rem);overflow-y:auto;border-radius:var(--radius-lg);padding:clamp(1.1rem,3vw,1.6rem);margin:auto}
+.modal-sm{width:min(430px,100%)}
+.modal-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:1.1rem}
+.modal-head h2{font-size:1.35rem;font-weight:800}
+.logo-emoji{font-size:2.6rem;line-height:1}
+.modal h1{font-size:1.9rem;font-weight:900}
+
+/* ============================== EN-TETE ============================== */
+.app-header{position:sticky;top:0;z-index:100;background:rgba(7,17,31,.85);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:.6rem;padding-block:.55rem}
+.brand{display:flex;align-items:center;gap:.5rem;background:none;border:0;padding:.3rem .4rem;border-radius:12px;font-weight:900;font-size:1.15rem;white-space:nowrap}
+.header-actions{display:flex;align-items:center;gap:.4rem;min-width:0}
+.wallet{display:flex;align-items:center;gap:.4rem;padding:.35rem .35rem .35rem .75rem;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid var(--line);font-size:.9rem;white-space:nowrap}
+.wallet .btn-icon{width:34px;min-height:34px;border-radius:999px}
+.profile-btn{display:flex;align-items:center;gap:.5rem;background:none;border:0;padding:.2rem .4rem;border-radius:12px;min-height:44px;max-width:160px}
+.profile-btn .name{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.emoji-avatar{font-size:1.7rem;line-height:1}
+
+/* ============================== ACCUEIL ============================== */
+.hero{border-radius:var(--radius-lg);padding:clamp(1.25rem,4vw,2.25rem);display:flex;align-items:center;justify-content:space-between;gap:1.25rem}
+.hero h2{font-size:clamp(1.7rem,5vw,3rem);font-weight:900;line-height:1.1;margin-top:.25rem;text-wrap:balance}
+.hero-kicker{color:var(--blue);font-weight:700}
+.hero-emoji{font-size:clamp(3rem,10vw,5rem);line-height:1}
+.hero-stats{display:flex;gap:.6rem;margin-top:1.1rem;flex-wrap:wrap}
+.games-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:1rem;margin-top:1rem}
+.game-card{
+  text-align:left;width:100%;min-height:180px;border-radius:var(--radius-lg);padding:clamp(1.1rem,3vw,1.5rem);border:1px solid var(--line);
+  background:linear-gradient(145deg,rgba(255,255,255,.07),rgba(255,255,255,.025));transition:transform .18s,border-color .18s;
+  display:flex;flex-direction:column;gap:.5rem
+}
+.game-card:hover{transform:translateY(-3px);border-color:rgba(56,189,248,.45)}
+.game-card .emoji{font-size:2.8rem;line-height:1}
+.game-card h3{font-size:1.5rem;font-weight:800}
+.game-card .badges{display:flex;gap:.4rem;margin-top:auto;padding-top:.6rem}
+
+/* ============================== PREPARATION ============================== */
+.screen-head{display:flex;align-items:center;gap:.9rem;margin-bottom:1.1rem}
+.screen-head h2{font-size:clamp(1.4rem,4vw,2rem);font-weight:900;line-height:1.15}
+.setup-layout{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:1.1rem;align-items:start}
+.setup-main{border-radius:var(--radius-lg);padding:clamp(1rem,3vw,1.5rem);display:grid;gap:1.5rem}
+.options{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:.7rem}
+.options-2{grid-template-columns:1fr 1fr}
+.mode-card{
+  text-align:left;width:100%;padding:.9rem 1rem;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.035);
+  transition:border-color .15s,background .15s,transform .15s;display:block
+}
+.mode-card:hover{border-color:rgba(56,189,248,.45);transform:translateY(-1px)}
+.mode-card.active{border-color:var(--blue);background:rgba(56,189,248,.1);box-shadow:0 0 0 1px rgba(56,189,248,.25)}
+.mode-card .emoji{font-size:1.6rem;line-height:1;display:block;margin-bottom:.35rem}
+.mode-card b{display:block}
+.mode-card p{color:var(--muted);font-size:.85rem;margin-top:.15rem}
+.chips{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:.75rem}
+.chips .btn{min-height:40px;padding:.4rem .9rem}
+.bet-row{display:flex;gap:.6rem;align-items:center}
+.bet-row span{font-weight:700;color:var(--muted)}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.6rem;margin-top:.8rem}
+.room-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:.7rem}
+.room-join{display:flex;gap:.5rem}
+.room-join .field{text-transform:uppercase;letter-spacing:.1em;min-width:0}
+.setup-actions{display:flex;gap:.7rem;flex-wrap:wrap}
+.setup-actions .btn-primary{flex:1 1 220px}
+.profile-card{border-radius:var(--radius-lg);padding:1.25rem;display:grid;gap:1rem}
+.profile-id{display:flex;align-items:center;gap:1rem}
+.profile-id .emoji-avatar{font-size:3.4rem}
+.profile-id .uname{font-size:1.2rem;font-weight:800;overflow-wrap:anywhere}
+
+/* ============================== PARTIE ============================== */
+.game-top{display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;margin-bottom:1rem}
+.game-top .left{display:flex;align-items:center;gap:.8rem}
+.game-top h2{font-size:1.5rem;font-weight:900}
+.game-layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:1.1rem;align-items:start}
+.board-panel{position:relative;border-radius:var(--radius-lg);padding:clamp(.75rem,2.5vw,1.5rem)}
+.side-panel{border-radius:var(--radius-lg);padding:1.1rem;display:grid;gap:.7rem}
+.players{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.6rem;margin-bottom:.9rem}
+.player-panel{display:flex;align-items:center;gap:.65rem;min-width:0;border-radius:16px;padding:.65rem .8rem;border:1px solid var(--line);background:rgba(255,255,255,.035);transition:border-color .2s,box-shadow .2s}
+.player-panel.active{border-color:var(--green);box-shadow:0 0 0 1px rgba(34,197,94,.2),0 0 24px rgba(34,197,94,.1)}
+.player-panel .emoji-avatar{font-size:1.9rem}
+.player-panel .who{min-width:0}
+.player-panel .pname{font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.player-panel .pmeta{font-size:.75rem;color:var(--muted)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:.35rem;vertical-align:baseline}
+.dot-1{background:#ef4444}.dot-2{background:#3b82f6}
+.turn-banner{text-align:center;font-weight:800;margin-bottom:.9rem;min-height:1.6rem}
+.board-stage{display:flex;justify-content:center}
+.legend{font-size:.8rem;color:var(--muted);text-align:center;margin-top:.8rem}
+
+/* Overlay d'attente */
+.waiting{position:absolute;inset:0;z-index:20;border-radius:inherit;background:rgba(7,17,31,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.9rem;padding:1.5rem;text-align:center}
+.spinner{width:46px;height:46px;border-radius:50%;border:4px solid rgba(255,255,255,.15);border-top-color:var(--blue);animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes nudge{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.need{animation:nudge .45s ease 2}
+.code-box{font-size:1.8rem;font-weight:900;letter-spacing:.25em;padding:.5rem 1rem;border:1px dashed var(--line-strong);border-radius:14px;background:rgba(255,255,255,.04)}
+
+/* ---------- Dames ---------- */
+#checkersBoard{
+  container-type:inline-size;width:100%;aspect-ratio:1;max-width:min(640px,100%);
+  display:grid;grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(8,minmax(0,1fr));
+  border-radius:14px;overflow:hidden;border:6px solid #172033;box-shadow:0 25px 70px rgba(0,0,0,.4);touch-action:manipulation
+}
+@supports (width:1dvh){#checkersBoard{max-width:min(640px,100%,max(300px,calc(100dvh - 340px)))}}
+.check-cell{position:relative;display:flex;align-items:center;justify-content:center;user-select:none;-webkit-user-select:none;appearance:none;border:0;padding:0;margin:0;border-radius:0;min-height:0;min-width:0}
+.check-cell.light{background:#f3eadb}
+.check-cell.dark{background:#6b432f;cursor:pointer}
+.check-cell.dark:hover{filter:brightness(1.1)}
+.check-cell.selected{box-shadow:inset 0 0 0 4px var(--blue)}
+.check-cell.last{box-shadow:inset 0 0 0 3px rgba(245,158,11,.6)}
+.check-cell:focus-visible{outline-offset:-4px}
+.move-dot{width:26%;aspect-ratio:1;border-radius:50%;background:#22c55e;box-shadow:0 0 0 5px rgba(34,197,94,.22)}
+.move-dot.capture-dot{background:#f59e0b;box-shadow:0 0 0 5px rgba(245,158,11,.25)}
+.checker-piece{
+  position:absolute;inset:12%;border-radius:50%;border:max(2px,1.1cqw) solid rgba(255,255,255,.35);
+  box-shadow:inset 0 4px 5px rgba(255,255,255,.18),0 6px 10px rgba(0,0,0,.38);display:flex;align-items:center;justify-content:center
+}
+.piece-p1{background:radial-gradient(circle at 35% 25%,#f87171,#b91c1c 70%)}
+.piece-p2{background:radial-gradient(circle at 35% 25%,#60a5fa,#1d4ed8 70%)}
+.checker-piece.must{box-shadow:inset 0 4px 5px rgba(255,255,255,.18),0 0 0 3px rgba(34,197,94,.7),0 6px 10px rgba(0,0,0,.38)}
+.piece-king::after{content:"♛";font-size:clamp(14px,4.5vw,30px);color:#fde68a;text-shadow:0 2px 3px rgba(0,0,0,.45);line-height:1}
+@supports (width:1cqw){.piece-king::after{font-size:clamp(14px,6cqw,40px)}}
+
+/* ---------- Ludo ---------- */
+.ludo-board{width:100%;max-width:min(640px,100%);margin-inline:auto}
+@supports (width:1dvh){.ludo-board{max-width:min(640px,100%,max(300px,calc(100dvh - 520px)))}}
+#ludoCanvas{display:block;width:100%;aspect-ratio:1;height:auto;background:#fff;border-radius:8px;box-shadow:0 25px 70px rgba(0,0,0,.5);touch-action:manipulation}
+/* Dé 3D : il se place au-dessus ou en dessous de la cage du joueur actif */
+.dice-dock{position:relative;height:clamp(112px,30vw,130px)}
+.dice-dock.off{display:none}
+.dice-slot{position:absolute;top:.5rem;left:20%;transform:translateX(-50%);display:grid;justify-items:center;gap:.45rem;transition:left .4s cubic-bezier(.2,.8,.2,1)}
+.dice-dock[data-side=right] .dice-slot{left:80%}
+.dice{--s:clamp(76px,21vw,92px);width:var(--s);height:var(--s);padding:0;border:0;background:none;cursor:default;position:relative}
+.dice-art{position:absolute;inset:0;filter:drop-shadow(0 10px 8px rgba(0,0,0,.4))}
+.dice-art svg{display:block;width:100%;height:100%;overflow:visible}
+.cup{transform-origin:50px 96px}
+.c1{--dc:#d8232a}.c2{--dc:#1e3f9e}.c3{--dc:#1a9e45}.c4{--dc:#fcd116;--pip:#1b1b1b}
+.dice:disabled{opacity:1}
+.dice.ready{cursor:pointer;animation:bob 1.3s ease-in-out infinite}
+.dice-hint{font-size:.8rem;font-weight:700;color:#e2e8f0;white-space:nowrap;max-width:44vw;overflow:hidden;text-overflow:ellipsis;text-align:center;min-height:1.2em}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.pawn-picker{display:flex;justify-content:center;gap:.5rem;margin-top:.6rem;flex-wrap:wrap}
+.pawn-picker .btn{min-width:56px}
+
+.swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(78px,1fr));gap:.6rem}
+.swatch{display:grid;justify-items:center;gap:.35rem;padding:.7rem .4rem;border-radius:16px;border:2px solid var(--line);background:rgba(255,255,255,.035);font-weight:700;min-height:44px}
+.swatch span{width:38px;height:38px;border-radius:50%;background:var(--c);box-shadow:inset 0 -4px 8px rgba(0,0,0,.3),0 0 0 3px rgba(255,255,255,.25)}
+.swatch.active{border-color:var(--blue);background:rgba(56,189,248,.12)}
+.btn.active{border-color:var(--blue);background:rgba(56,189,248,.14)}
+.pw-wrap{position:relative}.pw-wrap .field{padding-right:3rem}
+.pw-toggle{position:absolute;right:2px;top:50%;transform:translateY(-50%);width:44px;height:44px;border:0;background:none;color:var(--muted);border-radius:12px}
+.pw-toggle:hover{color:#fff}
+/* Pied de page */
+.site-footer{border-top:1px solid var(--line);padding:1rem 0 calc(1rem + env(safe-area-inset-bottom));color:var(--muted);font-size:.8rem;text-align:center}
+
+/* ============================== RESPONSIVE ============================== */
+@media (max-width:960px){
+  .setup-layout,.game-layout{grid-template-columns:1fr}
+}
+@media (max-width:640px){
+  .brand span.t{display:none}
+  .profile-btn .name{display:none}
+  .hero{flex-direction:column-reverse;align-items:flex-start}
+  .options-2{grid-template-columns:1fr}
+  .setup-actions{position:sticky;bottom:0;z-index:30;margin-inline:calc(-1 * clamp(1rem,3vw,1.5rem));padding:.8rem clamp(1rem,3vw,1.5rem) calc(.8rem + env(safe-area-inset-bottom));background:linear-gradient(to top,rgba(15,28,46,.98) 70%,rgba(15,28,46,0));border-radius:0 0 var(--radius-lg) var(--radius-lg)}
+  .players{gap:.45rem}
+  .player-panel{padding:.5rem .6rem;gap:.45rem}
+  .player-panel .emoji-avatar{font-size:1.5rem}
+  .side-panel{padding:.9rem}
+}
+@media (max-width:380px){
+  .wallet{font-size:.8rem;padding-left:.55rem}
+  .btn{padding-inline:.8rem}
+}
+@media (max-height:480px) and (orientation:landscape){
+  .app-header{position:static}
+  .screen{padding-block:.6rem}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Aller au contenu principal</a>
+<noscript><p class="center" style="padding:2rem">Arena Duel nécessite JavaScript pour fonctionner.</p></noscript>
+
+<!-- ============================== CONNEXION ============================== -->
+<div id="loginOverlay" class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+  <div class="modal card">
+    <div class="center">
+      <div class="logo-emoji" aria-hidden="true">⚔️</div>
+      <h1 id="loginTitle">Arena Duel</h1>
+      <p class="muted">Dames &amp; Ludo</p>
+    </div>
+    <div class="tabs" role="tablist" aria-label="Connexion ou inscription">
+      <button id="loginTab" class="btn btn-primary" role="tab" aria-selected="true" data-action="show-login" type="button">Connexion</button>
+      <button id="registerTab" class="btn btn-ghost" role="tab" aria-selected="false" data-action="show-register" type="button">Inscription</button>
+    </div>
+
+    <form id="loginForm" class="form-stack">
+      <div><label class="label" for="loginPhone">Téléphone</label><input id="loginPhone" class="field" type="tel" inputmode="tel" required autocomplete="tel" placeholder="07 xx xx xx xx"></div>
+      <div><label class="label" for="loginPassword">Mot de passe</label><div class="pw"><div class="pw-wrap"><input id="loginPassword" class="field" type="password" required autocomplete="current-password" placeholder="Votre mot de passe"><button type="button" class="pw-toggle" data-action="toggle-pw" data-target="loginPassword" aria-label="Afficher le mot de passe" aria-pressed="false"><i class="fa-solid fa-eye" aria-hidden="true"></i></button></div><button class="pw-toggle" type="button" data-action="toggle-pw" aria-label="Afficher le mot de passe" aria-pressed="false"><i class="fa-solid fa-eye" aria-hidden="true"></i></button></div></div>
+      <div id="loginError" class="form-error" role="alert"></div>
+      <button id="loginBtn" class="btn btn-primary btn-block" type="submit"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i> Se connecter</button>
+      <button class="btn btn-ghost btn-block" type="button" data-action="continue-local">Continuer sans compte (mode local)</button>
+    </form>
+
+    <form id="registerForm" class="form-stack hidden">
+      <div class="form-grid">
+        <div><label class="label" for="registerFullName">Nom complet</label><input id="registerFullName" class="field" required autocomplete="name" placeholder="Nom et prénom"></div>
+        <div><label class="label" for="registerPhone">Téléphone</label><input id="registerPhone" class="field" type="tel" inputmode="tel" required autocomplete="tel" placeholder="07 xx xx xx xx"></div>
+        <div><label class="label" for="registerEmail">Adresse e-mail</label><input id="registerEmail" class="field" type="email" required autocomplete="email" placeholder="exemple@gmail.com"></div>
+        <div><label class="label" for="registerAge">Âge</label><input id="registerAge" class="field" type="number" inputmode="numeric" min="18" max="120" required placeholder="18 ans minimum"></div>
+        <div><label class="label" for="registerPassword">Mot de passe</label><div class="pw"><div class="pw-wrap"><input id="registerPassword" class="field" type="password" minlength="6" required autocomplete="new-password" placeholder="6 caractères minimum"><button type="button" class="pw-toggle" data-action="toggle-pw" data-target="registerPassword" aria-label="Afficher le mot de passe" aria-pressed="false"><i class="fa-solid fa-eye" aria-hidden="true"></i></button></div><button class="pw-toggle" type="button" data-action="toggle-pw" aria-label="Afficher le mot de passe" aria-pressed="false"><i class="fa-solid fa-eye" aria-hidden="true"></i></button></div></div>
+        <div><label class="label" for="registerPassword2">Confirmer le mot de passe</label><div class="pw"><div class="pw-wrap"><input id="registerPassword2" class="field" type="password" minlength="6" required autocomplete="new-password"><button type="button" class="pw-toggle" data-action="toggle-pw" data-target="registerPassword2" aria-label="Afficher le mot de passe" aria-pressed="false"><i class="fa-solid fa-eye" aria-hidden="true"></i></button></div><button class="pw-toggle" type="button" data-action="toggle-pw" aria-label="Afficher le mot de passe" aria-pressed="false"><i class="fa-solid fa-eye" aria-hidden="true"></i></button></div></div>
+      </div>
+      <label class="check"><input id="registerTerms" type="checkbox" required><span>Je confirme avoir 18 ans ou plus et accepter les conditions d’utilisation.</span></label>
+      <div id="registerError" class="form-error" role="alert"></div>
+      <button id="registerBtn" class="btn btn-green btn-block" type="submit"><i class="fa-solid fa-user-plus" aria-hidden="true"></i> Créer mon compte</button>
+    </form>
+  </div>
+</div>
+
+<!-- ============================== EN-TETE ============================== -->
+<header class="app-header">
+  <div class="container header-inner">
+    <button class="brand" data-action="go-home" type="button" aria-label="Arena Duel, retour à l’accueil"><span aria-hidden="true">⚔️</span><span class="t">Arena Duel</span></button>
+    <div class="header-actions">
+      <div class="wallet" aria-label="Solde du portefeuille">
+        <span aria-hidden="true">💰</span><b id="balanceDisplay">1 000</b><span class="muted small">FCFA</span>
+        <button class="btn btn-ghost btn-icon" data-action="open-recharge" type="button" aria-label="Recharger le portefeuille"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+      </div>
+      <button class="btn btn-ghost btn-icon" data-action="toggle-sound" type="button" aria-label="Activer ou couper le son"><i id="soundIcon" class="fa-solid fa-volume-high" aria-hidden="true"></i></button>
+      <button class="profile-btn" data-action="open-avatar" type="button" aria-label="Modifier mon avatar"><span id="headerAvatar" class="emoji-avatar">😎</span><span id="headerUsername" class="name">Joueur</span></button>
+      <button class="btn btn-ghost btn-icon" data-action="logout" type="button" aria-label="Se déconnecter"><i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i></button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+  <!-- ============================== ACCUEIL ============================== -->
+  <section id="homeScreen" class="screen container" aria-labelledby="homeTitle">
+    <div class="hero card">
+      <div>
+        <p class="hero-kicker">Bienvenue</p>
+        <h2 id="homeTitle">Choisissez votre jeu</h2>
+        <p class="muted" style="margin-top:.6rem;max-width:46ch">Affrontez un ami virtuel, un proche ou un adversaire en ligne.</p>
+        <div class="hero-stats">
+          <span class="badge">🏆 <span id="statWinsHome">0</span> victoire(s)</span>
+          <span class="badge">❌ <span id="statLossesHome">0</span> défaite(s)</span>
+        </div>
+      </div>
+      <div class="hero-emoji" aria-hidden="true">🏆</div>
+    </div>
+    <div class="games-grid">
+      <button class="game-card" data-action="select-game" data-game="checkers" type="button">
+        <span class="emoji" aria-hidden="true">♟️</span><h3>Dames</h3>
+        <p class="muted">Prise obligatoire, dames volantes et rafles multiples.</p>
+        <span class="badges"><span class="badge">Moyen</span><span class="badge">Expert</span></span>
+      </button>
+      <button class="game-card" data-action="select-game" data-game="ludo" type="button">
+        <span class="emoji" aria-hidden="true">🎲</span><h3>Ludo</h3>
+        <p class="muted">4 pions, sortie au 6, captures et arrivée exacte.</p>
+        <span class="badges"><span class="badge">Moyen</span><span class="badge">Expert</span></span>
+      </button>
+    </div>
+  </section>
+
+  <!-- ============================== PREPARATION ============================== -->
+  <section id="setupScreen" class="screen container hidden" aria-labelledby="setupTitle">
+    <div class="screen-head">
+      <button class="btn btn-ghost btn-icon" data-action="go-home" type="button" aria-label="Retour à l’accueil"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></button>
+      <div><h2 id="setupTitle">Préparer la partie</h2><p class="muted">Choisissez le mode, le niveau et la mise.</p></div>
+    </div>
+
+    <div class="setup-layout">
+      <div class="setup-main card">
+        <div>
+          <h3 class="section-title">Mode de jeu</h3>
+          <div class="options">
+            <button class="mode-card" data-action="select-mode" data-mode="virtual" type="button"><span class="emoji" aria-hidden="true">🤖</span><b>Ami virtuel</b><p>Partie amicale, sans mise.</p></button>
+            <button class="mode-card" data-action="select-mode" data-mode="private" type="button"><span class="emoji" aria-hidden="true">👥</span><b>Jouer avec un ami</b><p>Créer ou rejoindre une partie privée.</p></button>
+            <button class="mode-card" data-action="select-mode" data-mode="online" type="button"><span class="emoji" aria-hidden="true">🌐</span><b>Jouer en ligne</b><p>Trouver un adversaire.</p></button>
+            <button class="mode-card" data-action="select-mode" data-mode="local" type="button"><span class="emoji" aria-hidden="true">🏠</span><b>Partie locale</b><p>Deux joueurs sur cet appareil.</p></button>
+          </div>
+        </div>
+
+        <div id="virtualLevelBox">
+          <h3 class="section-title">Niveau de l’ami virtuel</h3>
+          <div class="options options-2">
+            <button class="mode-card" data-action="select-level" data-level="medium" type="button"><b>🟢 Moyen</b><p>Bon niveau, quelques erreurs.</p></button>
+            <button class="mode-card" data-action="select-level" data-level="expert" type="button"><b>🔴 Expert</b><p>Plus stratégique et difficile.</p></button>
+          </div>
+        </div>
+
+        <div id="privateTypeBox" class="hidden">
+          <h3 class="section-title">Type de partie privée</h3>
+          <div class="options options-2">
+            <button class="mode-card" data-action="select-ptype" data-ptype="friendly" type="button"><b>🟢 Amicale</b><p>0 FCFA</p></button>
+            <button class="mode-card" data-action="select-ptype" data-ptype="money" type="button"><b>🔴 Avec mise</b><p>Les deux joueurs misent.</p></button>
+          </div>
+        </div>
+
+        <div id="onlineTypeBox" class="hidden">
+          <h3 class="section-title">Type de partie en ligne</h3>
+          <div class="options options-2">
+            <button class="mode-card" data-action="select-otype" data-otype="friendly" type="button"><b>🟢 Amicale</b><p>0 FCFA</p></button>
+            <button class="mode-card" data-action="select-otype" data-otype="money" type="button"><b>🔴 Avec mise</b><p>Mise identique entre adversaires.</p></button>
+          </div>
+        </div>
+
+        <div id="betBox" class="hidden">
+          <h3 class="section-title">Mise</h3>
+          <div class="chips">
+            <button class="btn btn-ghost" data-action="set-bet" data-bet="100" type="button">100</button>
+            <button class="btn btn-ghost" data-action="set-bet" data-bet="250" type="button">250</button>
+            <button class="btn btn-ghost" data-action="set-bet" data-bet="500" type="button">500</button>
+            <button class="btn btn-ghost" data-action="set-bet" data-bet="1000" type="button">1 000</button>
+            <button class="btn btn-ghost" data-action="set-bet" data-bet="2000" type="button">2 000</button>
+          </div>
+          <div class="bet-row">
+            <label class="sr-only" for="betInput">Montant de la mise en FCFA</label>
+            <input id="betInput" class="field" type="number" inputmode="numeric" min="50" step="50" value="500">
+            <span>FCFA</span>
+          </div>
+          <div class="stats-row">
+            <div class="stat"><div class="stat-label">Votre mise</div><b id="yourBetText">500 FCFA</b></div>
+            <div class="stat"><div class="stat-label">Cagnotte</div><b id="potText">1 000 FCFA</b></div>
+            <div class="stat"><div class="stat-label">Gain en cas de victoire</div><b id="winText" class="text-green">900 FCFA</b></div>
+          </div>
+        </div>
+
+        <div id="roomBox" class="hidden">
+          <h3 class="section-title">Partie privée</h3>
+          <div class="room-grid">
+            <button class="btn btn-primary" data-action="create-room" type="button"><i class="fa-solid fa-key" aria-hidden="true"></i> Créer une partie</button>
+            <div class="room-join">
+              <label class="sr-only" for="roomCodeInput">Code de la partie</label>
+              <input id="roomCodeInput" class="field" maxlength="8" placeholder="Code" autocomplete="off" autocapitalize="characters" spellcheck="false">
+              <button class="btn btn-green" data-action="join-room" type="button">Rejoindre</button>
+            </div>
+          </div>
+          <p id="roomStatus" class="muted small" style="margin-top:.7rem" aria-live="polite"></p>
+        </div>
+
+        <div id="ludoOptionsBox" class="hidden">
+          <div id="ludoCampsBox" style="margin-bottom:1.25rem">
+            <h3 class="section-title">Nombre de camps</h3>
+            <div class="options options-2">
+              <button class="mode-card" data-action="select-camps" data-camps="1" type="button"><b>1 camp</b><p>Une couleur de votre choix contre une autre.</p></button>
+              <button class="mode-card" data-action="select-camps" data-camps="2" type="button"><b>2 camps</b><p>Vous : Rouge + Jaune. Adversaire : Bleu + Vert.</p></button>
+            </div>
+          </div>
+          <div id="ludoColorBox">
+            <h3 class="section-title">Votre couleur <span class="badge">Obligatoire</span></h3>
+            <div class="swatches" role="group" aria-label="Choisir sa couleur">
+              <button class="swatch" data-action="select-color" data-color="3" style="--c:#1a9e45" type="button"><span></span>Vert</button>
+              <button class="swatch" data-action="select-color" data-color="4" style="--c:#fcd116" type="button"><span></span>Jaune</button>
+              <button class="swatch" data-action="select-color" data-color="2" style="--c:#1e3f9e" type="button"><span></span>Bleu</button>
+              <button class="swatch" data-action="select-color" data-color="1" style="--c:#e0252a" type="button"><span></span>Rouge</button>
+            </div>
+            <p class="muted small" style="margin-top:.5rem">Choisissez votre couleur pour pouvoir lancer la partie. L’adversaire prend la couleur opposée.</p>
+          </div>
+          <div id="ludoCountBox" style="margin-top:1.25rem">
+            <h3 class="section-title">Nombre de joueurs</h3>
+            <div class="chips" role="group" aria-label="Nombre de joueurs">
+              <button class="btn btn-ghost" data-action="select-count" data-count="2" type="button">2 joueurs</button>
+              <button class="btn btn-ghost" data-action="select-count" data-count="3" type="button">3 joueurs</button>
+              <button class="btn btn-ghost" data-action="select-count" data-count="4" type="button">4 joueurs</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="setup-actions">
+          <button id="launchBtn" class="btn btn-primary" data-action="launch" type="button"><i class="fa-solid fa-play" aria-hidden="true"></i> Lancer la partie</button>
+          <button class="btn btn-ghost" data-action="open-avatar" type="button">Choisir mon avatar</button>
+        </div>
+      </div>
+
+      <aside class="profile-card card" aria-label="Votre profil">
+        <h3 class="section-title" style="margin:0">Votre profil</h3>
+        <div class="profile-id">
+          <div id="setupAvatar" class="emoji-avatar">😎</div>
+          <div><div id="setupUsername" class="uname">Joueur</div><div class="muted small">Solde : <b id="setupBalance">1 000 FCFA</b></div></div>
+        </div>
+        <div class="stat full"><div class="stat-label">Résumé de la partie</div><b id="setupSummary">Ami virtuel · Moyen · Partie amicale</b></div>
+        <div class="stats-row full" style="margin:0">
+          <div class="stat"><div class="stat-label">Victoires</div><b id="statWins">0</b></div>
+          <div class="stat"><div class="stat-label">Défaites</div><b id="statLosses">0</b></div>
+        </div>
+        <p class="muted small full">Pour une partie avec mise, les deux joueurs doivent miser le même montant. Le gain prévu est de 90 % de la cagnotte.</p>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ============================== PARTIE ============================== -->
+  <section id="gameScreen" class="screen container hidden" aria-labelledby="gameTitle">
+    <div class="game-top">
+      <div class="left">
+        <button class="btn btn-ghost" data-action="leave-game" type="button"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Quitter</button>
+        <h2 id="gameTitle">Dames</h2>
+      </div>
+      <div id="gameInfoBadge" class="badge">Partie amicale</div>
+    </div>
+
+    <div class="game-layout">
+      <div class="board-panel card">
+        <div class="players">
+          <div id="player1Panel" class="player-panel"><span id="p1Avatar" class="emoji-avatar">🙂</span><div class="who"><div id="p1Name" class="pname">Joueur 1</div><div id="p1Meta" class="pmeta"></div></div></div>
+          <div id="player2Panel" class="player-panel"><span id="p2Avatar" class="emoji-avatar">🙂</span><div class="who"><div id="p2Name" class="pname">Joueur 2</div><div id="p2Meta" class="pmeta"></div></div></div>
+          <div id="player3Panel" class="player-panel hidden"><span id="p3Avatar" class="emoji-avatar">🙂</span><div class="who"><div id="p3Name" class="pname">Joueur 3</div><div id="p3Meta" class="pmeta"></div></div></div>
+          <div id="player4Panel" class="player-panel hidden"><span id="p4Avatar" class="emoji-avatar">🙂</span><div class="who"><div id="p4Name" class="pname">Joueur 4</div><div id="p4Meta" class="pmeta"></div></div></div>
+        </div>
+        <div id="turnBanner" class="turn-banner" aria-live="polite">À vous de jouer</div>
+
+        <div id="checkersWrap" class="board-stage"><div id="checkersBoard" role="group" aria-label="Plateau de dames"></div></div>
+
+        <div id="ludoWrap" class="hidden">
+          <div class="ludo-board">
+            <div id="dockTop" class="dice-dock off" data-side="left"></div>
+            <canvas id="ludoCanvas" width="600" height="600" role="img" aria-label="Plateau de Ludo"></canvas>
+            <div id="dockBottom" class="dice-dock" data-side="left">
+              <div class="dice-slot">
+                <button id="dice" class="dice c1" data-action="roll" type="button" aria-label="Lancer le dé"><span id="diceCube" class="dice-art" aria-hidden="true"></span></button>
+                <div id="diceHint" class="dice-hint" aria-live="polite"></div>
+              </div>
+            </div>
+          </div>
+          <div id="pawnPicker" class="pawn-picker hidden" role="group" aria-label="Choisir un pion"></div>
+          <p class="legend">Touchez votre dé pour le lancer, puis un pion entouré de vert pour le déplacer.</p>
+        </div>
+
+        <div id="waitingOverlay" class="waiting hidden" role="status">
+          <div class="spinner" aria-hidden="true"></div>
+          <h3 id="waitingTitle" style="font-size:1.25rem;font-weight:800">Recherche d’un adversaire…</h3>
+          <p id="waitingText" class="muted">Cela ne devrait prendre que quelques instants.</p>
+          <div id="waitingCodeWrap" class="hidden" style="display:grid;gap:.6rem;justify-items:center">
+            <div id="waitingCode" class="code-box">------</div>
+            <button class="btn btn-ghost" data-action="copy-code" type="button"><i class="fa-regular fa-copy" aria-hidden="true"></i> Copier le code</button>
+          </div>
+          <button class="btn btn-ghost" data-action="cancel-wait" type="button">Annuler</button>
+        </div>
+      </div>
+
+      <aside class="side-panel card" aria-label="Informations de la partie">
+        <div class="stats-row" style="margin:0;grid-template-columns:1fr 1fr">
+          <div class="stat"><div class="stat-label">Mise</div><b id="sideBet">0 FCFA</b></div>
+          <div class="stat"><div class="stat-label">Gain</div><b id="sideWin" class="text-green">0 FCFA</b></div>
+        </div>
+        <div class="stat"><div class="stat-label">État</div><b id="gameStatus">À vous de jouer</b></div>
+      </aside>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer"><div class="container">Jeu réservé aux personnes majeures (18+). Jouer avec de l’argent comporte des risques : jouez de façon responsable.</div></footer>
+
+<!-- ============================== MODALES ============================== -->
+<div id="avatarModal" class="modal-bg hidden" data-dismissible role="dialog" aria-modal="true" aria-labelledby="avatarTitle">
+  <div class="modal card">
+    <div class="modal-head"><h2 id="avatarTitle">Choisir votre avatar</h2><button class="btn btn-ghost btn-icon" data-action="close-modal" data-modal="avatarModal" type="button" aria-label="Fermer"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button></div>
+    <div id="avatarGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:.6rem"></div>
+    <button class="btn btn-primary btn-block" style="margin-top:1.2rem" data-action="confirm-avatar" type="button">Valider</button>
+  </div>
+</div>
+
+<div id="rechargeModal" class="modal-bg hidden" data-dismissible role="dialog" aria-modal="true" aria-labelledby="rechargeTitle">
+  <div class="modal modal-sm card">
+    <div class="modal-head"><h2 id="rechargeTitle">Recharger le portefeuille</h2><button class="btn btn-ghost btn-icon" data-action="close-modal" data-modal="rechargeModal" type="button" aria-label="Fermer"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button></div>
+    <label class="label" for="rechargeInput">Montant (FCFA)</label>
+    <input id="rechargeInput" class="field" type="number" inputmode="numeric" min="100" step="50" value="1000">
+    <p class="muted small" style="margin-top:.6rem">Mode démonstration : cette recharge est simulée sur cet appareil.</p>
+    <button class="btn btn-green btn-block" style="margin-top:1.1rem" data-action="recharge" type="button">Ajouter les fonds</button>
+  </div>
+</div>
+
+<div id="confirmModal" class="modal-bg hidden" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmText">
+  <div class="modal modal-sm card">
+    <h2 id="confirmTitle" style="font-size:1.3rem;font-weight:800">Confirmer</h2>
+    <p id="confirmText" class="muted" style="margin-top:.5rem"></p>
+    <div class="tabs" style="margin-bottom:0">
+      <button id="confirmNo" class="btn btn-ghost" type="button">Annuler</button>
+      <button id="confirmYes" class="btn btn-red" type="button">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<div id="gameOverModal" class="modal-bg hidden" role="dialog" aria-modal="true" aria-labelledby="gameOverTitle">
+  <div class="modal modal-sm card center">
+    <div id="gameOverIcon" style="font-size:3.6rem;line-height:1" aria-hidden="true">🏆</div>
+    <h2 id="gameOverTitle" style="font-size:1.8rem;font-weight:900;margin-top:.5rem">Victoire</h2>
+    <p id="gameOverSubtitle" class="muted" style="margin-top:.4rem"></p>
+    <div id="gameOverFinancial" class="stat" style="margin-top:1.1rem;text-align:left"></div>
+    <div class="tabs" style="margin-bottom:0">
+      <button class="btn btn-primary" data-action="replay" type="button">Rejouer</button>
+      <button class="btn btn-ghost" data-action="game-over-home" type="button">Accueil</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+<script>
+'use strict';
+
+/* =====================================================================
+   CONFIGURATION
+   - Pour pointer vers votre serveur en production, définissez avant ce script
+     la variable globale window.ARENA_API_BASE = 'https://api.votre-domaine.com'
+   ===================================================================== */
+const CONFIG = {
+  API_BASE: window.ARENA_API_BASE || (['localhost', '127.0.0.1', ''].includes(location.hostname) ? 'http://localhost:4000' : location.origin),
+  MIN_BET: 50,
+  MIN_RECHARGE: 100,
+  WIN_RATE: 0.9,                 // gain = 90 % de la cagnotte
+  START_BALANCE: 1000,
+  MIRROR_REMOTE_CHECKERS: true,  // chaque joueur voit ses pions en bas : on inverse les coordonnées reçues
+  BOT_DELAY: 650
+};
+const AVATARS = ['😎','😀','😄','😁','😂','🤣','😉','😊','🥰','😍','🤩','😈','🤠','🦁','🐯','🐺','🦊','🐼','🐸','🐵','🐨','🐙','🦄','🐲','👑','⚡','🔥','🎯','🏆','💎','🚀','🥷'];
+const REDUCE_MOTION = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ----------------------------- Utilitaires ----------------------------- */
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d = null) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch { /* stockage indisponible */ } },
+  del(k) { try { localStorage.removeItem(k); } catch { /* ignore */ } }
+};
+const money = n => `${Number(n || 0).toLocaleString('fr-FR')} FCFA`;
+const rand = n => Math.floor(Math.random() * n);
+const getToken = () => store.get('arena_token');
+const getStoredUser = () => { try { return JSON.parse(store.get('arena_user') || 'null'); } catch { return null; } };
+
+/* ----------------------------- État global ----------------------------- */
+const state = {
+  balance: Number(store.get('arena_balance', CONFIG.START_BALANCE)) || 0,
+  stats: (() => { try { return JSON.parse(store.get('arena_stats') || '{"wins":0,"losses":0}'); } catch { return { wins: 0, losses: 0 }; } })(),
+  selectedGame: 'checkers',
+  mode: 'virtual', botDifficulty: 'medium', privateType: 'friendly', onlineType: 'friendly',
+  bet: 500, roomCode: '', moneyGame: false,
+  soundEnabled: store.get('arena_sound', '1') === '1',
+  avatar: store.get('arena_avatar', '😎'), tempAvatar: null,
+  player1Name: 'Vous', player1Avatar: store.get('arena_avatar', '😎'),
+  player2Name: 'Ami virtuel', player2Avatar: '🤖',
+  gameActive: false, waiting: false, session: 0, currentPlayer: 1,
+  // dames
+  checkersBoard: [], selectedPiece: null, validMoves: [], forcedContinuation: null, lastMove: null,
+  // ludo
+  ludoColor: null, ludoCamps: 1, ludoCount: 2, ludoSeats: [], ludoOrder: [],
+  ludoLastRoll: 0, ludoHasRolled: false, ludoRolling: false, ludoDisp: null, ludoTarget: null,
+  socket: null
+};
+state.stats.wins = Number(state.stats.wins) || 0;
+state.stats.losses = Number(state.stats.losses) || 0;
+
+const needsBet = () => (state.mode === 'private' && state.privateType === 'money') || (state.mode === 'online' && state.onlineType === 'money');
+const isOnlineMode = () => state.mode === 'online' || state.mode === 'private';
+const soloMode = () => state.mode === 'virtual' || state.mode === 'local';
+const ludoCamps = () => (soloMode() ? state.ludoCamps : 1);   // 2 camps : réservé aux parties sur cet appareil
+const isBotTurn = () => state.mode === 'virtual' && (state.selectedGame === 'ludo' ? !!(state.ludoSeats[state.currentPlayer] && state.ludoSeats[state.currentPlayer].bot) : state.currentPlayer === 2);
+const isRemoteTurn = () => isOnlineMode() && state.currentPlayer === 2;
+const isHumanTurn = () => state.gameActive && !state.waiting && (state.mode === 'local' || (state.mode === 'virtual' ? !isBotTurn() : state.currentPlayer === 1));
+const nameOf = p => (state.selectedGame === 'ludo' && state.ludoSeats[p] ? state.ludoSeats[p].name : p === 1 ? state.player1Name : state.player2Name);
+const isYou = p => p === 1 && state.mode !== 'local' && state.player1Name === 'Vous';
+const who = (p, third, second) => `${nameOf(p)} ${isYou(p) ? second : third}`;
+const potentialWin = () => Math.floor(state.bet * 2 * CONFIG.WIN_RATE);
+
+/* Les minuteurs sont liés à la partie en cours : un ancien timer ne peut pas agir sur une nouvelle partie. */
+function later(fn, ms) { const s = state.session; return setTimeout(() => { if (s === state.session) fn(); }, ms); }
+
+/* ----------------------------- Interface générale ----------------------------- */
+let toastTimer;
+function toast(message) {
+  const el = $('toast');
+  el.textContent = message; el.classList.remove('hidden');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.add('hidden'), 3000);
+}
+function saveBalance() { store.set('arena_balance', String(Math.max(0, Math.round(state.balance)))); }
+function saveStats() { store.set('arena_stats', JSON.stringify(state.stats)); }
+function updateBalance() {
+  $('balanceDisplay').textContent = Number(state.balance).toLocaleString('fr-FR');
+  $('setupBalance').textContent = money(state.balance);
+}
+function updateStats() {
+  ['statWins', 'statWinsHome'].forEach(id => { $(id).textContent = state.stats.wins; });
+  ['statLosses', 'statLossesHome'].forEach(id => { $(id).textContent = state.stats.losses; });
+}
+function updateUserUI() {
+  $('headerUsername').textContent = state.player1Name;
+  $('headerAvatar').textContent = state.player1Avatar;
+  $('setupUsername').textContent = state.player1Name;
+  $('setupAvatar').textContent = state.player1Avatar;
+}
+function showScreen(name) {
+  ['home', 'setup', 'game'].forEach(s => $(s + 'Screen').classList.toggle('hidden', s !== name));
+  window.scrollTo({ top: 0, behavior: 'auto' });
+}
+
+/* ----------------------------- Modales ----------------------------- */
+let lastFocus = null;
+function openModal(id) {
+  const m = $(id); lastFocus = document.activeElement;
+  m.classList.remove('hidden'); document.body.classList.add('no-scroll');
+  const target = m.querySelector('input:not([type=checkbox]), .btn-primary, button'); if (target) target.focus({ preventScroll: true });
+}
+function closeModal(id) {
+  $(id).classList.add('hidden');
+  if (!document.querySelector('.modal-bg:not(.hidden)')) document.body.classList.remove('no-scroll');
+  if (lastFocus && document.contains(lastFocus)) lastFocus.focus({ preventScroll: true });
+}
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  const open = [...document.querySelectorAll('.modal-bg[data-dismissible]:not(.hidden)')].pop();
+  if (open) closeModal(open.id);
+});
+document.querySelectorAll('.modal-bg[data-dismissible]').forEach(bg => bg.addEventListener('mousedown', e => { if (e.target === bg) closeModal(bg.id); }));
+
+function askConfirm({ title, text, yes = 'Confirmer' }) {
+  return new Promise(resolve => {
+    $('confirmTitle').textContent = title; $('confirmText').textContent = text; $('confirmYes').textContent = yes;
+    const done = v => { $('confirmYes').onclick = $('confirmNo').onclick = null; closeModal('confirmModal'); resolve(v); };
+    $('confirmYes').onclick = () => done(true); $('confirmNo').onclick = () => done(false);
+    openModal('confirmModal'); $('confirmNo').focus();
+  });
+}
+
+/* ----------------------------- Sons (WebAudio, aucun fichier externe) ----------------------------- */
+let audioCtx = null;
+const SOUNDS = {
+  move: [[440, .06]], capture: [[330, .07], [220, .12]], king: [[523, .08], [659, .08], [784, .14]],
+  dice: [[300, .04], [420, .04], [360, .04], [480, .05]], win: [[523, .12], [659, .12], [784, .12], [1047, .3]],
+  lose: [[392, .16], [294, .16], [196, .34]], error: [[180, .14]]
+};
+function playSound(name) {
+  if (!state.soundEnabled || !SOUNDS[name]) return;
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    let t = audioCtx.currentTime;
+    for (const [freq, dur] of SOUNDS[name]) {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = 'triangle'; o.frequency.value = freq;
+      g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.08, t + .01); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+      o.connect(g).connect(audioCtx.destination); o.start(t); o.stop(t + dur + .02); t += dur;
+    }
+  } catch { /* audio non disponible */ }
+}
+function toggleSound() {
+  state.soundEnabled = !state.soundEnabled; store.set('arena_sound', state.soundEnabled ? '1' : '0');
+  $('soundIcon').className = state.soundEnabled ? 'fa-solid fa-volume-high' : 'fa-solid fa-volume-xmark';
+  toast(state.soundEnabled ? 'Son activé' : 'Son coupé');
+}
+
+/* ----------------------------- Authentification ----------------------------- */
+async function api(path, body) {
+  let res;
+  try {
+    res = await fetch(CONFIG.API_BASE + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  } catch { throw new Error('Serveur inaccessible. Vérifiez votre connexion ou réessayez plus tard.'); }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || data.message || 'Une erreur est survenue.');
+  return data;
+}
+function showLoginForm() {
+  $('loginForm').classList.remove('hidden'); $('registerForm').classList.add('hidden');
+  $('loginTab').className = 'btn btn-primary'; $('registerTab').className = 'btn btn-ghost';
+  $('loginTab').setAttribute('aria-selected', 'true'); $('registerTab').setAttribute('aria-selected', 'false');
+}
+function showRegisterForm() {
+  $('loginForm').classList.add('hidden'); $('registerForm').classList.remove('hidden');
+  $('loginTab').className = 'btn btn-ghost'; $('registerTab').className = 'btn btn-primary';
+  $('loginTab').setAttribute('aria-selected', 'false'); $('registerTab').setAttribute('aria-selected', 'true');
+}
+function hideLoginScreen() { $('loginOverlay').classList.add('hidden'); if (!document.querySelector('.modal-bg:not(.hidden)')) document.body.classList.remove('no-scroll'); }
+function showLoginScreen() { $('loginOverlay').classList.remove('hidden'); document.body.classList.add('no-scroll'); showLoginForm(); }
+const validPhone = p => /^[+\d][\d\s().-]{7,17}$/.test(p);
+
+async function loginUser() {
+  const phone = $('loginPhone').value.trim(), password = $('loginPassword').value;
+  const error = $('loginError'), btn = $('loginBtn'); error.textContent = '';
+  if (!validPhone(phone)) { error.textContent = 'Numéro de téléphone invalide.'; return; }
+  btn.disabled = true; btn.textContent = 'Connexion…';
+  try {
+    const data = await api('/api/users/login', { phone_number: phone, password });
+    store.set('arena_token', data.token); store.set('arena_user', JSON.stringify(data.user || {}));
+    state.player1Name = data.user?.username || 'Vous'; state.player1Avatar = state.avatar;
+    hideLoginScreen(); updateUserUI(); connectSocket(); toast('Connexion réussie.');
+  } catch (e) { error.textContent = e.message; }
+  finally { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i> Se connecter'; }
+}
+async function registerUser() {
+  const v = id => $(id).value;
+  const fullName = v('registerFullName').trim(), phone = v('registerPhone').trim(), email = v('registerEmail').trim();
+  const age = Number(v('registerAge')), password = v('registerPassword'), password2 = v('registerPassword2');
+  const error = $('registerError'), btn = $('registerBtn'); error.textContent = '';
+  if (fullName.length < 2) { error.textContent = 'Entrez votre nom complet.'; return; }
+  if (!validPhone(phone)) { error.textContent = 'Numéro de téléphone invalide.'; return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { error.textContent = 'Adresse e-mail invalide.'; return; }
+  if (!Number.isFinite(age) || age < 18) { error.textContent = 'L’inscription est réservée aux personnes de 18 ans et plus.'; return; }
+  if (password.length < 6) { error.textContent = 'Le mot de passe doit contenir au moins 6 caractères.'; return; }
+  if (password !== password2) { error.textContent = 'Les mots de passe ne correspondent pas.'; return; }
+  btn.disabled = true; btn.textContent = 'Création…';
+  try {
+    const data = await api('/api/users/register', { username: fullName, full_name: fullName, phone_number: phone, email, age, password });
+    if (data.token) {
+      store.set('arena_token', data.token); store.set('arena_user', JSON.stringify(data.user || { username: fullName }));
+      state.player1Name = data.user?.username || fullName; hideLoginScreen(); updateUserUI(); connectSocket(); toast('Compte créé avec succès.');
+    } else {
+      $('loginPhone').value = phone; showLoginForm();
+      $('loginError').textContent = 'Compte créé. Connectez-vous avec votre téléphone et votre mot de passe.';
+    }
+  } catch (e) { error.textContent = e.message; }
+  finally { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-user-plus" aria-hidden="true"></i> Créer mon compte'; }
+}
+function continueAsLocal() { state.player1Name = 'Joueur local'; state.player1Avatar = state.avatar; hideLoginScreen(); updateUserUI(); toast('Mode local activé.'); }
+function logout() {
+  if (state.socket) { try { state.socket.disconnect(); } catch { /* ignore */ } state.socket = null; }
+  store.del('arena_token'); store.del('arena_user');
+  state.player1Name = 'Vous'; goHome(); updateUserUI(); showLoginScreen();
+}
+
+/* ----------------------------- Temps réel (Socket.io chargé à la demande) ----------------------------- */
+let ioPromise = null;
+function loadSocketIO() {
+  if (window.io) return Promise.resolve(true);
+  if (ioPromise) return ioPromise;
+  ioPromise = new Promise(resolve => {
+    const s = document.createElement('script');
+    s.src = CONFIG.API_BASE + '/socket.io/socket.io.js';
+    s.onload = () => resolve(!!window.io);
+    s.onerror = () => { ioPromise = null; resolve(false); };
+    document.head.appendChild(s);
+  });
+  return ioPromise;
+}
+async function connectSocket() {
+  const token = getToken(); if (!token) return false;
+  if (state.socket) return true;
+  if (!(await loadSocketIO())) return false;
+  const s = io(CONFIG.API_BASE, { auth: { token }, reconnectionAttempts: 5 });
+  state.socket = s;
+  s.on('connect_error', err => {
+    if (String(err && err.message || '').toLowerCase().includes('auth')) { logout(); toast('Session expirée. Reconnectez-vous.'); return; }
+    if (state.waiting) { cancelWaiting(true); toast('Connexion au serveur de jeu impossible.'); }
+  });
+  s.on('disconnect', () => { if (state.gameActive && isOnlineMode()) toast('Connexion perdue. Tentative de reconnexion…'); });
+  s.on('matchmaking:waiting', () => { /* l'écran d'attente est déjà visible */ });
+  s.on('game:start', onRemoteStart);
+  s.on('game:move', applyRemoteMove);
+  s.on('game:state', data => console.debug('État distant reçu', data));
+  s.on('game:over', data => { if (data && data.winner) triggerGameOver(Number(data.winner), 'Résultat confirmé par le serveur.', true); });
+  return true;
+}
+function emitGame(event, payload) { if (state.socket && state.socket.connected) state.socket.emit(event, payload); }
+function emitOnline(event, payload) { if (isOnlineMode()) emitGame(event, payload); }
+
+/* ----------------------------- Préparation de la partie ----------------------------- */
+function selectGame(game) {
+  state.selectedGame = game;
+  if (game === 'ludo') state.ludoColor = null;   // la couleur doit être choisie avant chaque partie
+  $('setupTitle').textContent = game === 'checkers' ? 'Préparer une partie de Dames' : 'Préparer une partie de Ludo';
+  showScreen('setup'); updateSetupUI();
+}
+function goHome() {
+  state.session++; state.gameActive = false; state.waiting = false; state.roomCode = '';
+  state.selectedPiece = null; state.validMoves = []; state.forcedContinuation = null; state.ludoHasRolled = false; state.ludoRolling = false;
+  $('waitingOverlay').classList.add('hidden'); $('roomCodeInput').value = ''; $('roomStatus').textContent = '';
+  showScreen('home');
+}
+function selectMode(mode) { state.mode = mode; updateSetupUI(); }
+function selectColor(c) { state.ludoColor = c; updateSetupUI(); }
+function selectCount(n) { state.ludoCount = n; updateSetupUI(); }
+function selectCamps(n) { state.ludoCamps = n; updateSetupUI(); }
+function togglePw(el) {
+  const i = $(el.dataset.target), show = i.type === 'password'; i.type = show ? 'text' : 'password';
+  el.setAttribute('aria-pressed', show); el.setAttribute('aria-label', show ? 'Masquer le mot de passe' : 'Afficher le mot de passe');
+  el.firstElementChild.className = show ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+}
+function selectLevel(level) { state.botDifficulty = level; updateSetupUI(); }
+function selectPrivateType(t) { state.privateType = t; updateSetupUI(); }
+function selectOnlineType(t) { state.onlineType = t; updateSetupUI(); }
+function setBet(n) { $('betInput').value = n; onBetInput(); }
+function onBetInput() { state.bet = Math.max(0, Math.floor(Number($('betInput').value) || 0)); updateSetupUI(); }
+
+function updateSetupUI() {
+  updateBalance(); updateUserUI(); updateStats();
+  const m = state.mode, bet = needsBet();
+  const mark = (sel, attr, val) => document.querySelectorAll(sel).forEach(b => { const on = b.dataset[attr] === val; b.classList.toggle('active', on); b.setAttribute('aria-pressed', on); });
+  mark('[data-mode]', 'mode', m); mark('[data-level]', 'level', state.botDifficulty);
+  mark('[data-ptype]', 'ptype', state.privateType); mark('[data-otype]', 'otype', state.onlineType);
+  const ludo = state.selectedGame === 'ludo', solo = m === 'virtual' || m === 'local';
+  const camps = ludoCamps();
+  $('ludoOptionsBox').classList.toggle('hidden', !ludo); $('ludoCampsBox').classList.toggle('hidden', !solo);
+  $('ludoColorBox').classList.toggle('hidden', camps === 2); $('ludoCountBox').classList.toggle('hidden', !solo || camps === 2);
+  mark('[data-camps]', 'camps', String(camps));
+  document.querySelectorAll('[data-color]').forEach(b => { const on = Number(b.dataset.color) === state.ludoColor; b.classList.toggle('active', on); b.setAttribute('aria-pressed', on); });
+  document.querySelectorAll('[data-count]').forEach(b => { const on = Number(b.dataset.count) === state.ludoCount; b.classList.toggle('active', on); b.setAttribute('aria-pressed', on); });
+  $('virtualLevelBox').classList.toggle('hidden', m !== 'virtual');
+  $('privateTypeBox').classList.toggle('hidden', m !== 'private');
+  $('onlineTypeBox').classList.toggle('hidden', m !== 'online');
+  $('roomBox').classList.toggle('hidden', m !== 'private');
+  $('betBox').classList.toggle('hidden', !bet);
+  $('yourBetText').textContent = money(bet ? state.bet : 0);
+  $('potText').textContent = money(bet ? state.bet * 2 : 0);
+  $('winText').textContent = money(bet ? potentialWin() : 0);
+  const lvl = state.botDifficulty === 'expert' ? 'Expert' : 'Moyen';
+  $('setupSummary').textContent =
+    m === 'virtual' ? `Ami virtuel · ${lvl} · Partie amicale` :
+    m === 'local' ? 'Partie locale · Amicale' :
+    m === 'private' ? (bet ? `Ami · Mise ${money(state.bet)}` : 'Ami · Partie amicale') :
+    (bet ? `En ligne · Mise ${money(state.bet)}` : 'En ligne · Partie amicale');
+  if (ludo) $('setupSummary').textContent += camps === 2 ? ' · 2 camps (Rouge + Jaune)' : (state.ludoColor ? ` · ${CNAME[state.ludoColor]}` : ' · couleur à choisir') + (solo && state.ludoCount > 2 ? ` · ${state.ludoCount} joueurs` : '');
+}
+
+function openAvatarPicker() {
+  state.tempAvatar = state.avatar;
+  const grid = $('avatarGrid'); grid.innerHTML = '';
+  AVATARS.forEach(a => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = a; b.setAttribute('aria-label', 'Avatar ' + a);
+    b.className = 'btn btn-ghost' + (a === state.tempAvatar ? ' btn-primary' : '');
+    b.style.cssText = 'font-size:1.6rem;padding:0;aspect-ratio:1;min-height:48px';
+    b.onclick = () => { state.tempAvatar = a; grid.querySelectorAll('button').forEach(x => x.classList.remove('btn-primary')); b.classList.add('btn-primary'); };
+    grid.appendChild(b);
+  });
+  openModal('avatarModal');
+}
+function confirmAvatar() {
+  state.avatar = state.tempAvatar || state.avatar; state.player1Avatar = state.avatar;
+  store.set('arena_avatar', state.avatar); updateUserUI(); closeModal('avatarModal');
+}
+function simulatePayment() {
+  const amount = Math.floor(Number($('rechargeInput').value) || 0);
+  if (amount < CONFIG.MIN_RECHARGE) { toast(`Montant minimum : ${money(CONFIG.MIN_RECHARGE)}.`); return; }
+  state.balance += amount; saveBalance(); updateBalance(); closeModal('rechargeModal'); toast(`+${money(amount)} ajoutés au portefeuille.`);
+}
+
+/* ----------------------------- Parties privées ----------------------------- */
+function createPrivateRoom() {
+  state.roomCode = Math.random().toString(36).slice(2, 8).toUpperCase();
+  $('roomCodeInput').value = state.roomCode;
+  $('roomStatus').textContent = `Code créé : ${state.roomCode}. Partagez-le avec votre ami, puis lancez la partie.`;
+  emitGame('room:create', { game: state.selectedGame, roomCode: state.roomCode, bet: state.privateType === 'money' ? state.bet : 0 });
+  toast(`Code de la partie : ${state.roomCode}`);
+}
+function joinPrivateRoom() {
+  const code = $('roomCodeInput').value.trim().toUpperCase();
+  if (!/^[A-Z0-9]{4,8}$/.test(code)) { toast('Entrez un code valide (4 à 8 caractères).'); return; }
+  state.roomCode = code;
+  $('roomStatus').textContent = `Code ${code} prêt. Appuyez sur « Lancer la partie » pour rejoindre.`;
+}
+async function copyRoomCode() {
+  try { await navigator.clipboard.writeText(state.roomCode); toast('Code copié.'); }
+  catch { toast(`Code : ${state.roomCode}`); }
+}
+
+/* ----------------------------- Lancement / attente / fin ----------------------------- */
+async function launchGame() {
+  if (state.selectedGame === 'ludo' && ludoCamps() === 1 && !state.ludoColor) {
+    toast('Choisissez votre couleur avant de jouer.'); playSound('error');
+    const box = $('ludoColorBox'); box.scrollIntoView({ behavior: REDUCE_MOTION ? 'auto' : 'smooth', block: 'center' });
+    box.classList.remove('need'); void box.offsetWidth; box.classList.add('need');
+    return;
+  }
+  const bet = needsBet();
+  if (bet) {
+    state.bet = Math.floor(Number($('betInput').value) || 0);
+    if (state.bet < CONFIG.MIN_BET) { toast(`La mise minimale est de ${money(CONFIG.MIN_BET)}.`); return; }
+    if (state.balance < state.bet) { toast('Solde insuffisant pour cette mise.'); openModal('rechargeModal'); return; }
+  }
+  const online = isOnlineMode();
+  if (online) {
+    if (!getToken()) { toast('Connectez-vous pour jouer avec un autre joueur.'); showLoginScreen(); return; }
+    const btn = $('launchBtn'); btn.disabled = true;
+    const ok = await connectSocket(); btn.disabled = false;
+    if (!ok) { toast('Serveur de jeu inaccessible. Réessayez dans un instant.'); return; }
+    if (state.mode === 'private' && !state.roomCode) createPrivateRoom();
+  }
+  state.moneyGame = bet;
+  state.player1Name = getStoredUser()?.username || state.player1Name || 'Vous';
+  state.player1Avatar = state.avatar;
+  state.player2Name = state.mode === 'virtual' ? 'Ami virtuel' : state.mode === 'local' ? 'Joueur 2' : 'Adversaire';
+  state.player2Avatar = state.mode === 'virtual' ? '🤖' : state.mode === 'local' ? '🙂' : '🎯';
+  state.session++;
+  state.gameActive = false;
+  renderGameHeader(); showScreen('game');
+  if (online) {
+    state.waiting = true; showWaiting();
+    if (state.mode === 'online') emitGame('matchmaking:join', { game: state.selectedGame, bet: state.bet, roomCode: null });
+    else emitGame('room:join', { game: state.selectedGame, roomCode: state.roomCode, bet: bet ? state.bet : 0, avatar: state.player1Avatar });
+    renderIdleBoard();
+    return;
+  }
+  startGame(1);
+}
+function showWaiting() {
+  const priv = state.mode === 'private';
+  $('waitingTitle').textContent = priv ? 'En attente de votre ami…' : 'Recherche d’un adversaire…';
+  $('waitingText').textContent = priv ? 'Partagez ce code pour qu’il vous rejoigne.' : 'Cela ne devrait prendre que quelques instants.';
+  $('waitingCodeWrap').classList.toggle('hidden', !priv); $('waitingCode').textContent = state.roomCode || '------';
+  $('waitingOverlay').classList.remove('hidden');
+}
+function cancelWaiting(silent = false) {
+  if (!state.waiting && !silent) return;
+  emitGame('game:leave', { game: state.selectedGame, roomCode: state.roomCode });
+  goHome();
+}
+function onRemoteStart(data) {
+  if (!state.waiting && !state.gameActive) return;
+  state.waiting = false; $('waitingOverlay').classList.add('hidden');
+  state.player2Name = data?.opponent?.username || data?.opponentName || 'Adversaire';
+  state.player2Avatar = data?.opponent?.avatar || '🎯';
+  if (state.moneyGame) {
+    if (state.balance < state.bet) { toast('Solde insuffisant.'); cancelWaiting(true); return; }
+    state.balance -= state.bet; saveBalance(); updateBalance();
+  }
+  const first = (data?.yourTurn === false || data?.playerNumber === 2 || data?.starts === 2) ? 2 : 1;
+  toast('Adversaire trouvé !'); startGame(first);
+}
+function startGame(first = 1) {
+  state.session++; state.gameActive = true; state.waiting = false; state.currentPlayer = first;
+  renderGameHeader();
+  if (state.selectedGame === 'checkers') initCheckers(); else initLudo();
+}
+function renderGameHeader() {
+  const ck = state.selectedGame === 'checkers';
+  $('gameTitle').textContent = ck ? 'Dames' : 'Ludo';
+  $('gameInfoBadge').textContent = state.moneyGame ? `Mise ${money(state.bet)} · Gain ${money(potentialWin())}` : 'Partie amicale';
+  $('sideBet').textContent = money(state.moneyGame ? state.bet : 0);
+  $('sideWin').textContent = money(state.moneyGame ? potentialWin() : 0);
+  if (!ck) setupLudoSeats();
+  for (let i = 1; i <= 4; i++) {
+    const s = state.ludoSeats[i], info = !ck && s ? { n: s.name, a: s.avatar } : i === 1 ? { n: state.player1Name, a: state.player1Avatar } : i === 2 ? { n: state.player2Name, a: state.player2Avatar } : null;
+    $('player' + i + 'Panel').classList.toggle('hidden', !info);
+    if (info) { $('p' + i + 'Name').textContent = info.n; $('p' + i + 'Avatar').textContent = info.a; }
+  }
+  $('checkersWrap').classList.toggle('hidden', !ck); $('ludoWrap').classList.toggle('hidden', ck);
+}
+function renderIdleBoard() {
+  if (state.selectedGame === 'checkers') { state.checkersBoard = newCheckersBoard(); renderCheckers(); }
+  else { buildDice(); resetLudo(); renderLudo(); }
+  $('p1Meta').innerHTML = '<span class="dot dot-1"></span>Joueur 1'; $('p2Meta').innerHTML = '<span class="dot dot-2"></span>Joueur 2';
+  $('turnBanner').textContent = 'En attente…'; $('gameStatus').textContent = 'En attente d’un adversaire';
+}
+async function leaveGame() {
+  const needConfirm = state.gameActive && (state.moneyGame || isOnlineMode());
+  if (needConfirm) {
+    const ok = await askConfirm({
+      title: 'Quitter la partie ?',
+      text: state.moneyGame ? `Vous abandonnerez la partie et perdrez votre mise de ${money(state.bet)}.` : 'Vous abandonnerez la partie en cours.',
+      yes: 'Quitter'
+    });
+    if (!ok) return;
+  }
+  if (state.waiting) { cancelWaiting(); return; }
+  if (state.gameActive && isOnlineMode()) { state.stats.losses++; saveStats(); emitGame('game:leave', { game: state.selectedGame, roomCode: state.roomCode }); }
+  goHome();
+}
+function relaunchCurrentGame() {
+  if (isOnlineMode()) { showScreen('setup'); updateSetupUI(); return; }
+  startGame(1);
+  showScreen('game');
+}
+function triggerGameOver(winner, reason, fromServer = false) {
+  if (!state.gameActive) return;
+  state.gameActive = false; state.session++;
+  const local = state.mode === 'local', won = winner === 1;
+  let gain = 0;
+  if (state.moneyGame && won) { gain = potentialWin(); state.balance += gain; saveBalance(); updateBalance(); }
+  if (!local) { state.stats[won ? 'wins' : 'losses']++; saveStats(); updateStats(); }
+  $('gameOverIcon').textContent = local || won ? '🏆' : '❌';
+  $('gameOverTitle').textContent = local ? `${nameOf(winner)} gagne !` : won ? 'Victoire !' : 'Défaite';
+  $('gameOverSubtitle').textContent = reason || '';
+  const fin = $('gameOverFinancial');
+  if (state.moneyGame) {
+    fin.innerHTML = `<div style="display:flex;justify-content:space-between"><span>Mise</span><b>${money(state.bet)}</b></div>` +
+      `<div style="display:flex;justify-content:space-between;margin-top:.5rem"><span>${won ? 'Gain' : 'Perte'}</span><b class="${won ? 'text-green' : 'text-red'}">${won ? '+' + money(gain) : '−' + money(state.bet)}</b></div>` +
+      `<div style="display:flex;justify-content:space-between;margin-top:.5rem"><span>Nouveau solde</span><b>${money(state.balance)}</b></div>`;
+  } else {
+    fin.innerHTML = '<div class="center"><b>Partie amicale</b><div class="muted small" style="margin-top:.2rem">Aucun argent en jeu.</div></div>';
+  }
+  playSound(local || won ? 'win' : 'lose');
+  if ((local || won) && typeof window.confetti === 'function') window.confetti({ particleCount: 140, spread: 75, origin: { y: .6 }, disableForReducedMotion: true });
+  openModal('gameOverModal');
+  if (!fromServer) emitOnline('game:over', { game: state.selectedGame, winner, reason });
+}
+function updateTurnUI() {
+  const p = state.currentPlayer;
+  for (let i = 1; i <= 4; i++) $('player' + i + 'Panel').classList.toggle('active', p === i);
+  let text;
+  if (state.mode === 'local') text = `Tour de ${nameOf(p)}`;
+  else if (state.mode === 'virtual') text = isBotTurn() ? `${nameOf(p)} réfléchit…` : 'À vous de jouer';
+  else text = p === 1 ? 'À vous de jouer' : `Tour de ${nameOf(2)}`;
+  if (state.forcedContinuation && state.selectedGame === 'checkers') text += ' — poursuivez la capture';
+  if (state.selectedGame === 'ludo' && ludoCamps() === 2 && state.ludoSeats[p]) text += ` (${CNAME[state.ludoSeats[p].c]})`;
+  $('turnBanner').textContent = text; $('gameStatus').textContent = text;
+}
+
+/* =====================================================================
+   DAMES
+   ===================================================================== */
+const DIAGS = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
+const inBoard = (r, c) => r >= 0 && r < 8 && c >= 0 && c < 8;
+const owner = v => (v === 1 || v === 11 ? 1 : v === 2 || v === 22 ? 2 : 0);
+const isKing = v => v === 11 || v === 22;
+const cloneBoard = b => b.map(r => r.slice());
+const cellName = (r, c) => String.fromCharCode(97 + c) + (8 - r);
+const countPieces = (board, p) => board.reduce((n, row) => n + row.filter(v => owner(v) === p).length, 0);
+
+function newCheckersBoard() {
+  return [[0,2,0,2,0,2,0,2],[2,0,2,0,2,0,2,0],[0,2,0,2,0,2,0,2],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[1,0,1,0,1,0,1,0],[0,1,0,1,0,1,0,1],[1,0,1,0,1,0,1,0]];
+}
+function initCheckers() {
+  state.checkersBoard = newCheckersBoard();
+  state.selectedPiece = null; state.validMoves = []; state.forcedContinuation = null; state.lastMove = null;
+  renderCheckers(); updateTurnUI();
+  maybeBotCheckers();
+}
+/* Déplacements possibles d'une pièce (pion : prise avant et arrière ; dame : volante) */
+function pieceMoves(board, r, c, capturesOnly = false) {
+  const piece = board[r][c], me = owner(piece), out = [];
+  if (!me) return out;
+  if (isKing(piece)) {
+    for (const [dr, dc] of DIAGS) {
+      let rr = r + dr, cc = c + dc, cap = null;
+      while (inBoard(rr, cc)) {
+        const t = board[rr][cc];
+        if (t === 0) { if (cap) out.push({ r: rr, c: cc, capture: cap }); else if (!capturesOnly) out.push({ r: rr, c: cc, capture: null }); }
+        else { if (owner(t) === me || cap) break; cap = { r: rr, c: cc }; }
+        rr += dr; cc += dc;
+      }
+    }
+  } else {
+    const fwd = me === 1 ? -1 : 1;
+    if (!capturesOnly) for (const dc of [-1, 1]) { const rr = r + fwd, cc = c + dc; if (inBoard(rr, cc) && board[rr][cc] === 0) out.push({ r: rr, c: cc, capture: null }); }
+    for (const [dr, dc] of DIAGS) {
+      const mr = r + dr, mc = c + dc, lr = r + 2 * dr, lc = c + 2 * dc;
+      if (inBoard(lr, lc) && owner(board[mr][mc]) === 3 - me && board[lr][lc] === 0) out.push({ r: lr, c: lc, capture: { r: mr, c: mc } });
+    }
+  }
+  return out;
+}
+/* Coups légaux : la prise est obligatoire, et une rafle doit être poursuivie avec le même pion */
+function legalMoves(board, player, forced = null) {
+  if (forced) return pieceMoves(board, forced.r, forced.c, true).map(to => ({ from: { r: forced.r, c: forced.c }, to }));
+  const caps = [], quiet = [];
+  for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+    if (owner(board[r][c]) !== player) continue;
+    for (const m of pieceMoves(board, r, c)) (m.capture ? caps : quiet).push({ from: { r, c }, to: m });
+  }
+  return caps.length ? caps : quiet;
+}
+function applyMove(board, { from, to }) {
+  const b = cloneBoard(board); let piece = b[from.r][from.c]; let promoted = false;
+  b[from.r][from.c] = 0; if (to.capture) b[to.capture.r][to.capture.c] = 0;
+  if (piece === 1 && to.r === 0) { piece = 11; promoted = true; }
+  else if (piece === 2 && to.r === 7) { piece = 22; promoted = true; }
+  b[to.r][to.c] = piece;
+  const continues = !!to.capture && !promoted && pieceMoves(b, to.r, to.c, true).some(m => m.capture);
+  return { board: b, promoted, continues };
+}
+
+function renderCheckers() {
+  const boardEl = $('checkersBoard'); boardEl.innerHTML = '';
+  const human = isHumanTurn();
+  const legal = human ? legalMoves(state.checkersBoard, state.currentPlayer, state.forcedContinuation) : [];
+  const mustCapture = legal.some(m => m.to.capture);
+  const movable = new Set(legal.map(m => m.from.r + ',' + m.from.c));
+  for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+    const playable = (r + c) % 2 === 1, value = state.checkersBoard[r][c];
+    const cell = document.createElement(playable ? 'button' : 'div');
+    cell.className = 'check-cell ' + (playable ? 'dark' : 'light');
+    if (playable) {
+      cell.type = 'button'; cell.dataset.r = r; cell.dataset.c = c;
+      cell.setAttribute('aria-label', cellName(r, c) + (value ? (owner(value) === 1 ? ', pion rouge' : ', pion bleu') + (isKing(value) ? ' (dame)' : '') : ', vide'));
+    }
+    if (state.selectedPiece && state.selectedPiece.r === r && state.selectedPiece.c === c) cell.classList.add('selected');
+    else if (state.lastMove && state.lastMove.to.r === r && state.lastMove.to.c === c) cell.classList.add('last');
+    const move = playable && state.validMoves.find(m => m.r === r && m.c === c);
+    if (move) { const dot = document.createElement('div'); dot.className = 'move-dot' + (move.capture ? ' capture-dot' : ''); cell.appendChild(dot); }
+    if (value) {
+      const piece = document.createElement('div');
+      piece.className = `checker-piece ${owner(value) === 1 ? 'piece-p1' : 'piece-p2'}${isKing(value) ? ' piece-king' : ''}`;
+      if (mustCapture && movable.has(r + ',' + c) && !state.selectedPiece) piece.classList.add('must');
+      cell.appendChild(piece);
+    }
+    boardEl.appendChild(cell);
+  }
+  const n1 = countPieces(state.checkersBoard, 1), n2 = countPieces(state.checkersBoard, 2);
+  $('p1Meta').innerHTML = `<span class="dot dot-1"></span>${n1} pièce${n1 > 1 ? 's' : ''}`;
+  $('p2Meta').innerHTML = `<span class="dot dot-2"></span>${n2} pièce${n2 > 1 ? 's' : ''}`;
+}
+$('checkersBoard').addEventListener('click', e => {
+  const cell = e.target.closest('.check-cell.dark'); if (!cell) return;
+  handleCheckersCell(Number(cell.dataset.r), Number(cell.dataset.c));
+});
+function handleCheckersCell(r, c) {
+  if (!isHumanTurn() || !state.checkersBoard.length) return;
+  const dest = state.selectedPiece && state.validMoves.find(m => m.r === r && m.c === c);
+  if (dest) { playCheckersMove({ from: state.selectedPiece, to: dest }); return; }
+  if (owner(state.checkersBoard[r][c]) !== state.currentPlayer) {
+    if (!state.forcedContinuation) { state.selectedPiece = null; state.validMoves = []; renderCheckers(); }
+    return;
+  }
+  const f = state.forcedContinuation;
+  if (f && !(f.r === r && f.c === c)) { toast('Vous devez poursuivre la capture avec le même pion.'); return; }
+  const all = legalMoves(state.checkersBoard, state.currentPlayer, f);
+  const moves = all.filter(m => m.from.r === r && m.from.c === c).map(m => m.to);
+  if (!moves.length) {
+    toast(all.some(m => m.to.capture) ? 'Prise obligatoire : choisissez un pion entouré de vert.' : 'Ce pion ne peut pas bouger.');
+    playSound('error'); return;
+  }
+  state.selectedPiece = { r, c }; state.validMoves = moves; renderCheckers();
+}
+function playCheckersMove(move, { emit = true } = {}) {
+  const player = state.currentPlayer;
+  const res = applyMove(state.checkersBoard, move);
+  state.checkersBoard = res.board;
+  state.lastMove = { from: move.from, to: { r: move.to.r, c: move.to.c } };
+  playSound(res.promoted ? 'king' : move.to.capture ? 'capture' : 'move');
+  if (emit && player === 1) emitOnline('game:move', { game: 'checkers', from: move.from, to: { r: move.to.r, c: move.to.c }, capture: move.to.capture || null, piece: res.board[move.to.r][move.to.c] });
+  if (res.continues) {
+    state.forcedContinuation = { r: move.to.r, c: move.to.c };
+    state.selectedPiece = { r: move.to.r, c: move.to.c };
+    state.validMoves = legalMoves(res.board, player, state.forcedContinuation).map(m => m.to);
+    renderCheckers(); updateTurnUI();
+    if (player === 2) maybeBotCheckers();
+    return;
+  }
+  state.forcedContinuation = null; state.selectedPiece = null; state.validMoves = [];
+  state.currentPlayer = 3 - player;
+  renderCheckers(); updateTurnUI();
+  if (checkCheckersEnd()) return;
+  maybeBotCheckers();
+}
+function checkCheckersEnd() {
+  const p = state.currentPlayer;
+  if (legalMoves(state.checkersBoard, p).length) return false;
+  const none = countPieces(state.checkersBoard, p) === 0;
+  triggerGameOver(3 - p, none ? `${who(p, 'n’a', 'n’avez')} plus de pièces.` : `${who(p, 'ne peut', 'ne pouvez')} plus jouer.`);
+  return true;
+}
+/* --- Coups reçus d'un adversaire en ligne (validés avec les règles locales) --- */
+function applyRemoteMove(data) {
+  if (!state.gameActive || !data) return;
+  if (data.game === 'checkers' && data.from && data.to && state.currentPlayer === 2) {
+    const flip = CONFIG.MIRROR_REMOTE_CHECKERS ? (p => p && ({ r: 7 - p.r, c: 7 - p.c })) : (p => p);
+    const from = flip(data.from), to = flip(data.to);
+    const m = legalMoves(state.checkersBoard, 2, state.forcedContinuation).find(x => x.from.r === from.r && x.from.c === from.c && x.to.r === to.r && x.to.c === to.c);
+    if (!m) { console.warn('Coup distant refusé', data); toast('Coup de l’adversaire invalide.'); return; }
+    playCheckersMove(m, { emit: false });
+  } else if (data.game === 'ludo' && state.currentPlayer === 2) {
+    if (data.action === 'roll' && !state.ludoHasRolled && !state.ludoRolling) doRoll(Number(data.roll));
+    else if (data.action === 'move') moveLudoPawn(Number(data.pawn), { emit: false });
+  }
+}
+
+/* --- Ami virtuel (Dames) --- */
+function maybeBotCheckers() { if (state.mode === 'virtual' && state.currentPlayer === 2 && state.gameActive) later(botCheckersTurn, CONFIG.BOT_DELAY); }
+function botCheckersTurn() {
+  if (!state.gameActive || !isBotTurn()) return;
+  const moves = legalMoves(state.checkersBoard, 2, state.forcedContinuation);
+  if (!moves.length) { checkCheckersEnd(); return; }
+  const chosen = chooseBotCheckersMove(moves);
+  state.selectedPiece = { ...chosen.from }; state.validMoves = [chosen.to]; renderCheckers();
+  later(() => playCheckersMove(chosen), 420);
+}
+function evalCheckers(board) {  // score du point de vue du joueur 2 (le bot)
+  let s = 0;
+  for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+    const v = board[r][c]; if (!v) continue;
+    const o = owner(v); let val = isKing(v) ? 320 : 100;
+    if (!isKing(v)) { val += (o === 2 ? r : 7 - r) * 6; if ((o === 2 && r === 0) || (o === 1 && r === 7)) val += 12; }
+    val += (3.5 - Math.abs(3.5 - c)) * 2;
+    s += o === 2 ? val : -val;
+  }
+  return s + Math.random() * 1.5;
+}
+function searchCheckers(board, player, depth, alpha, beta, forced) {
+  const moves = legalMoves(board, player, forced);
+  if (!moves.length) return { score: player === 2 ? -100000 - depth : 100000 + depth };
+  if (depth === 0) return { score: evalCheckers(board) };
+  let best = { score: player === 2 ? -Infinity : Infinity, move: null };
+  for (const m of moves) {
+    const res = applyMove(board, m);
+    const r = searchCheckers(res.board, res.continues ? player : 3 - player, depth - 1, alpha, beta, res.continues ? { r: m.to.r, c: m.to.c } : null);
+    if (player === 2) { if (r.score > best.score) best = { score: r.score, move: m }; alpha = Math.max(alpha, r.score); }
+    else { if (r.score < best.score) best = { score: r.score, move: m }; beta = Math.min(beta, r.score); }
+    if (beta <= alpha) break;
+  }
+  return best;
+}
+function chooseBotCheckersMove(moves) {
+  if (moves.length === 1) return moves[0];
+  const expert = state.botDifficulty === 'expert';
+  if (!expert && Math.random() < .3) return moves[rand(moves.length)];       // le niveau moyen fait des erreurs
+  const depth = expert ? 4 : 2;
+  const forced = state.forcedContinuation;
+  return searchCheckers(state.checkersBoard, 2, depth, -Infinity, Infinity, forced).move || moves[rand(moves.length)];
+}
+
+/* =====================================================================
+   LUDO
+   Plateau 15×15. Le parcours compte 52 cases ; chaque pion avance de 0 à 50 sur le parcours,
+   puis 51 à 55 dans son couloir d'arrivée, et 56 = arrivée (il faut le nombre exact).
+   ===================================================================== */
+const L = { RING: 52, LAST_RING: 50, FINISH: 56, START: { 1: 39, 2: 26, 3: 0, 4: 13 }, SAFE: [0, 8, 13, 21, 26, 34, 39, 47] };   // 1 = rouge (bas-gauche), 2 = bleu (bas-droite)
+const LUDO_PATH = (() => {
+  const p = [], add = (x, y) => p.push([x, y]);
+  for (let x = 1; x <= 5; x++) add(x, 6);
+  for (let y = 5; y >= 0; y--) add(6, y);
+  add(7, 0); add(8, 0);
+  for (let y = 1; y <= 5; y++) add(8, y);
+  for (let x = 9; x <= 14; x++) add(x, 6);
+  add(14, 7); add(14, 8);
+  for (let x = 13; x >= 9; x--) add(x, 8);
+  for (let y = 9; y <= 14; y++) add(8, y);
+  add(7, 14); add(6, 14);
+  for (let y = 13; y >= 9; y--) add(6, y);
+  for (let x = 5; x >= 0; x--) add(x, 8);
+  add(0, 7); add(0, 6);
+  return p;
+})();
+const LUDO_LANE = {
+  1: [[7,13],[7,12],[7,11],[7,10],[7,9]],   // rouge : monte depuis le bas
+  2: [[13,7],[12,7],[11,7],[10,7],[9,7]],   // bleu : vient de la droite
+  3: [[1,7],[2,7],[3,7],[4,7],[5,7]],       // vert (décor)
+  4: [[7,1],[7,2],[7,3],[7,4],[7,5]]        // jaune (décor)
+};
+const LUDO_YARD = { 1: [[2,11],[4,11],[2,13],[4,13]], 2: [[11,11],[13,11],[11,13],[13,13]], 3: [[2,2],[4,2],[2,4],[4,4]], 4: [[11,2],[13,2],[11,4],[13,4]] };
+const COL = { 1: { main: '#e0252a', hi: '#ff9a9d' }, 2: { main: '#1e3f9e', hi: '#7b9bff' }, 3: { main: '#1a9e45', hi: '#86e6a3' }, 4: { main: '#fcd116', hi: '#fff3a3', ink: '#1b1b1b' } };
+const YARDS = [{ id: 3, x: 0, y: 0, start: 0 }, { id: 4, x: 360, y: 0, start: 13 }, { id: 2, x: 360, y: 360, start: 26 }, { id: 1, x: 0, y: 360, start: 39 }];
+const ARROWS = [{ x: 0, y: 7, dir: 'right', id: 3 }, { x: 7, y: 0, dir: 'down', id: 4 }, { x: 14, y: 7, dir: 'left', id: 2 }, { x: 7, y: 14, dir: 'up', id: 1 }];
+const STACK = [[-.2, -.2], [.2, .2], [-.2, .2], [.2, -.2]];
+const PIPS = { 0: [], 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
+
+const CLOCK = [3, 4, 2, 1];                       // sens horaire : vert, jaune, bleu, rouge
+const OPP = { 1: 4, 4: 1, 2: 3, 3: 2 };           // cage opposée
+const CNAME = { 1: 'Rouge', 2: 'Bleu', 3: 'Vert', 4: 'Jaune' };
+const DICE_POS = { 1: ['bottom', 'left'], 2: ['bottom', 'right'], 3: ['top', 'left'], 4: ['top', 'right'] };
+const FIN = { 1: [0, .8], 2: [.8, 0], 3: [-.8, 0], 4: [0, -.8] };
+const seatOf = p => state.ludoSeats[p];
+const seatKeys = () => state.ludoSeats.map((s, i) => (s ? i : 0)).filter(Boolean);
+const ludoPos = p => seatOf(p).pos;
+const ludoAbs = (p, pos) => (L.START[seatOf(p).c] + pos) % L.RING;
+const ludoIsSafe = abs => L.SAFE.includes(abs);
+const ludoCanMove = (p, i, roll) => { const pos = ludoPos(p)[i]; return pos === -1 ? roll === 6 : pos + roll <= L.FINISH; };
+const legalLudoPawns = (p, roll) => [0, 1, 2, 3].filter(i => ludoCanMove(p, i, roll));
+const teamOf = p => seatOf(p).team;
+const ludoSeatDone = p => ludoPos(p).every(v => v === L.FINISH);
+const teamDone = t => seatKeys().filter(q => teamOf(q) === t).every(ludoSeatDone);
+const ludoNext = p => { const o = state.ludoOrder; for (let k = 1; k <= o.length; k++) { const q = o[(o.indexOf(p) + k) % o.length]; if (!ludoSeatDone(q)) return q; } return p; };
+const enemyRing = p => seatKeys().filter(q => teamOf(q) !== teamOf(p)).flatMap(q => ludoPos(q).filter(v => v >= 0 && v <= L.LAST_RING).map(v => ludoAbs(q, v)));
+const dotHtml = c => `<span class="dot" style="background:${c}"></span>`;
+
+/* Places : la couleur choisie joue en premier ; 2 joueurs = cages opposées ; 3-4 joueurs dans le sens horaire */
+function setupLudoSeats() {
+  const camps = ludoCamps(), my = camps === 2 ? 1 : (state.ludoColor || 1), team2 = camps === 2;
+  const n = team2 ? 4 : soloMode() ? state.ludoCount : 2, i0 = CLOCK.indexOf(my), cols = [my];
+  if (n === 2) cols.push(OPP[my]); else for (let k = 1; cols.length < n; k++) cols.push(CLOCK[(i0 + k) % 4]);
+  // 2 camps : sièges 1 et 3 (Rouge + Jaune) = vous ; sièges 2 et 4 (Vert + Bleu) = l'adversaire. Ils jouent à tour de rôle.
+  state.ludoSeats = [null, ...cols.map((c, i) => team2 ? {
+    c, pos: [-1, -1, -1, -1], team: i % 2 === 0 ? 1 : 2, bot: state.mode === 'virtual' && i % 2 === 1,
+    name: i % 2 === 0 ? state.player1Name : state.player2Name, avatar: i % 2 === 0 ? state.player1Avatar : state.player2Avatar
+  } : {
+    c, pos: [-1, -1, -1, -1], team: i + 1, bot: state.mode === 'virtual' && i > 0,
+    name: i === 0 ? state.player1Name : i === 1 && (n === 2 || state.mode !== 'virtual') ? state.player2Name : state.mode === 'virtual' ? `Bot ${i}` : `Joueur ${i + 1}`,
+    avatar: i === 0 ? state.player1Avatar : i === 1 ? state.player2Avatar : state.mode === 'virtual' ? '🤖' : '🙂'
+  })];
+  const rank = s => (CLOCK.indexOf(cols[s - 1]) - i0 + 4) % 4;
+  state.ludoOrder = cols.map((c, i) => i + 1).sort((a, b) => rank(a) - rank(b));
+}
+
+/* Dé « gobelet » : le gobelet recouvre le dé, le secoue, puis se lève sur la face tirée */
+const dicePips = n => PIPS[n || 0] ? (PIPS[n] || []).map(i => `<circle cx="${[25, 50, 75][i % 3]}" cy="${[25, 50, 75][Math.floor(i / 3)]}" r="9.5" style="fill:var(--pip,#fff)"/>`).join('') : '';
+let cupAnim = null;
+function buildDice() {
+  const c = $('diceCube'); if (c.querySelector('svg')) return;
+  c.innerHTML = '<svg viewBox="0 0 100 100" focusable="false">' +
+    '<ellipse cx="50" cy="94" rx="34" ry="5" fill="rgba(0,0,0,.28)"/>' +
+    '<g transform="translate(22 36) scale(.56)"><rect width="100" height="100" rx="18" style="fill:var(--dc)" stroke="rgba(255,255,255,.45)" stroke-width="3"/><g class="die-pips"></g></g>' +
+    '<g class="cup"><polygon points="13,16 87,16 97,96 3,96" fill="#8b5e3c"/><polygon points="13,16 28,16 22,96 3,96" fill="#a9794f"/>' +
+    '<rect x="6" y="52" width="88" height="9" fill="#5c3b22" opacity=".55"/><rect x="9" y="8" width="82" height="14" rx="4" fill="#5c3b22"/></g></svg>';
+}
+function setDiceFace(n) { buildDice(); $('diceCube').querySelector('.die-pips').innerHTML = dicePips(n); }
+function setCup(covered) {
+  buildDice(); const cup = $('diceCube').querySelector('.cup');
+  if (cupAnim) { cupAnim.cancel(); cupAnim = null; }
+  cup.style.opacity = covered ? 1 : 0; cup.style.transform = covered ? 'translateY(0)' : 'translateY(-80px)';
+}
+function animateDice(final, done) {
+  buildDice(); const cup = $('diceCube').querySelector('.cup'), s = state.session;
+  if (REDUCE_MOTION || !cup.animate) { setDiceFace(final); setCup(false); done(); return; }
+  if (cupAnim) cupAnim.cancel();
+  cup.style.opacity = 1; cup.style.transform = 'translateY(0)';
+  const k = (t, o, x = 0, y = 0, r = 0) => ({ transform: `translate(${x}px,${y}px) rotate(${r}deg)`, opacity: o, offset: t });
+  cupAnim = cup.animate([k(0, 1), k(.12, 1, 0, -6), k(.24, 1, -3, 0, -13), k(.38, 1, 3, 0, 13), k(.52, 1, -3, 0, -13), k(.66, 1, 3, 0, 13), k(.78, 1), k(1, 0, 0, -80)],
+    { duration: 1500, easing: 'ease-in-out', fill: 'forwards' });
+  setTimeout(() => { if (s === state.session) setDiceFace(final); }, 880);     // le dé change sous le gobelet
+  setTimeout(() => { if (s === state.session) done(); }, 1550);
+}
+function placeDice(color) {
+  const [side, pos] = DICE_POS[color], dock = $(side === 'top' ? 'dockTop' : 'dockBottom'), slot = $('dice').parentNode;
+  if (slot.parentNode !== dock) dock.appendChild(slot);
+  dock.dataset.side = pos;
+}
+function updateDocks() {
+  const sides = new Set(seatKeys().map(p => DICE_POS[seatOf(p).c][0]));
+  $('dockTop').classList.toggle('off', !sides.has('top')); $('dockBottom').classList.toggle('off', !sides.has('bottom'));
+}
+function resetLudo() {
+  setupLudoSeats();
+  state.ludoLastRoll = 0; state.ludoHasRolled = false; state.ludoRolling = false; state.ludoDisp = null;
+  setDiceFace(0); updateDocks();
+}
+function initLudo() { buildDice(); resetLudo(); renderLudo(); updateLudoTurn(); maybeBotLudo(); }
+
+function updateLudoTurn() {
+  updateTurnUI();
+  const p = state.currentPlayer, c = seatOf(p).c, human = isHumanTurn();
+  const canRoll = human && !state.ludoHasRolled && !state.ludoRolling, dice = $('dice');
+  dice.className = `dice c${c}` + (canRoll ? ' ready' : '') + (state.ludoRolling ? ' rolling' : '');
+  dice.disabled = !canRoll; dice.setAttribute('aria-label', canRoll ? `Lancer le dé (${CNAME[c].toLowerCase()})` : 'Dé');
+  placeDice(c);
+  if (!state.ludoRolling) setCup(!state.ludoHasRolled);   // gobelet posé tant que le dé n'a pas été lancé
+  $('diceHint').textContent = canRoll ? 'Touchez le dé' : state.ludoRolling ? '' : human && state.ludoHasRolled ? 'Choisissez un pion' : human ? '' : `${nameOf(p)} joue…`;
+  const legal = human && state.ludoHasRolled ? legalLudoPawns(p, state.ludoLastRoll) : [];
+  const picker = $('pawnPicker'); picker.innerHTML = ''; picker.classList.toggle('hidden', legal.length < 2);
+  if (legal.length > 1) legal.forEach(i => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'btn btn-ghost';
+    b.dataset.action = 'pick-pawn'; b.dataset.pawn = i; b.textContent = `Pion ${i + 1}`; picker.appendChild(b);
+  });
+  seatKeys().forEach(q => { const d = ludoPos(q).filter(v => v === L.FINISH).length; $('p' + q + 'Meta').innerHTML = `${dotHtml(COL[seatOf(q).c].main)}${d}/4 arrivé${d > 1 ? 's' : ''}`; });
+  renderLudo();
+}
+
+/* --- Déroulement --- */
+function rollLudoDice() {
+  if (!isHumanTurn() || state.ludoHasRolled || state.ludoRolling) return;
+  const roll = 1 + rand(6);
+  emitOnline('game:move', { game: 'ludo', action: 'roll', player: 1, roll });
+  doRoll(roll);
+}
+function doRoll(roll) {
+  if (!(roll >= 1 && roll <= 6) || !state.gameActive) return;
+  const p = state.currentPlayer;
+  state.ludoRolling = true; updateLudoTurn(); playSound('dice');
+  animateDice(roll, () => {
+    state.ludoRolling = false; state.ludoLastRoll = roll; state.ludoHasRolled = true;
+    const legal = legalLudoPawns(p, roll);
+    if (!legal.length) { updateLudoTurn(); later(endLudoTurnWithoutMove, 900); return; }
+    updateLudoTurn();
+    if (isBotTurn()) later(() => botPickPawn(legal), 700);
+    else if (!isRemoteTurn() && legal.length === 1) later(() => moveLudoPawn(legal[0]), 450);
+  });
+}
+function endLudoTurnWithoutMove() {
+  state.ludoHasRolled = false;
+  if (state.ludoLastRoll !== 6) state.currentPlayer = ludoNext(state.currentPlayer);
+  updateLudoTurn(); maybeBotLudo();
+}
+function humanPickPawn(i) { if (isHumanTurn() && state.ludoHasRolled) moveLudoPawn(i); }
+function moveLudoPawn(index, { emit = true } = {}) {
+  if (!state.gameActive || !state.ludoHasRolled || state.ludoRolling) return;
+  const p = state.currentPlayer, roll = state.ludoLastRoll;
+  if (!(index >= 0 && index < 4) || !ludoCanMove(p, index, roll)) return;
+  const mine = ludoPos(p), old = mine[index];
+  mine[index] = old === -1 ? 0 : old + roll;
+  let captured = 0;
+  if (mine[index] <= L.LAST_RING) {
+    const abs = ludoAbs(p, mine[index]);
+    if (!ludoIsSafe(abs)) seatKeys().filter(q => teamOf(q) !== teamOf(p)).forEach(q => ludoPos(q).forEach((v, i) => { if (v >= 0 && v <= L.LAST_RING && ludoAbs(q, v) === abs) { ludoPos(q)[i] = -1; captured++; } }));
+  }
+  const finished = mine[index] === L.FINISH;
+  if (emit && p === 1) emitOnline('game:move', { game: 'ludo', action: 'move', player: 1, pawn: index, from: old, to: mine[index], captured: captured > 0 });
+  playSound(captured ? 'capture' : finished ? 'king' : 'move');
+  state.ludoHasRolled = false;
+  if (teamDone(teamOf(p))) { updateLudoTurn(); triggerGameOver(teamOf(p), seatKeys().filter(q => teamOf(q) === teamOf(p)).length > 1 ? 'Les huit pions sont arrivés.' : 'Les quatre pions sont arrivés.'); return; }
+  if (!((roll === 6 || finished) && !ludoSeatDone(p))) state.currentPlayer = ludoNext(p);
+  updateLudoTurn(); maybeBotLudo();
+}
+function maybeBotLudo() { if (isBotTurn() && state.gameActive) later(() => doRoll(1 + rand(6)), CONFIG.BOT_DELAY); }
+function scoreLudoMove(p, i, roll) {
+  const pos = ludoPos(p)[i], np = pos === -1 ? 0 : pos + roll, foes = enemyRing(p);
+  const behind = abs => foes.some(f => { const d = (abs - f + L.RING) % L.RING; return d >= 1 && d <= 6; });
+  let s = Math.random();
+  if (np === L.FINISH) s += 80;
+  if (pos === -1) s += 45;
+  if (np <= L.LAST_RING) {
+    const abs = ludoAbs(p, np);
+    if (ludoIsSafe(abs)) s += 25; else { if (foes.includes(abs)) s += 100; if (behind(abs)) s -= 35; }
+  } else s += 20;
+  if (pos >= 0 && pos <= L.LAST_RING && !ludoIsSafe(ludoAbs(p, pos)) && behind(ludoAbs(p, pos))) s += 15;
+  return s + np * .6;
+}
+function botPickPawn(legal) {
+  if (!state.gameActive || !isBotTurn() || !state.ludoHasRolled) return;
+  const p = state.currentPlayer, roll = state.ludoLastRoll;
+  let chosen;
+  if (state.botDifficulty === 'expert') chosen = legal.map(i => ({ i, s: scoreLudoMove(p, i, roll) })).sort((a, b) => b.s - a.s)[0].i;
+  else { const caps = legal.filter(i => scoreLudoMove(p, i, roll) >= 100); chosen = caps.length ? caps[0] : legal[rand(legal.length)]; }
+  moveLudoPawn(chosen, { emit: false });
+}
+
+/* --- Positions et animation des pions --- */
+function cellUnit(p, i, pos) {
+  const c = seatOf(p).c;
+  if (pos === -1) { const [x, y] = LUDO_YARD[c][i]; return { x, y, key: null, r: 15 }; }
+  if (pos === L.FINISH) { const [dx, dy] = FIN[c], sp = (i - 1.5) * .28; return { x: 7.5 + dx + (dx ? 0 : sp), y: 7.5 + dy + (dy ? 0 : sp), key: null, r: 9 }; }
+  const [gx, gy] = pos > L.LAST_RING ? LUDO_LANE[c][pos - 51] : LUDO_PATH[ludoAbs(p, pos)];
+  return { x: gx + .5, y: gy + .5, key: gx + ',' + gy, r: 15 };
+}
+function ludoTargets() {
+  const t = {}, groups = new Map();
+  for (const p of seatKeys()) { t[p] = []; for (let i = 0; i < 4; i++) {
+    const u = cellUnit(p, i, ludoPos(p)[i]), o = { x: u.x * 40, y: u.y * 40, r: u.r };
+    t[p][i] = o; if (u.key) { if (!groups.has(u.key)) groups.set(u.key, []); groups.get(u.key).push(o); }
+  } }
+  groups.forEach(list => { if (list.length > 1) list.forEach((o, k) => { o.x += STACK[k % 4][0] * 40; o.y += STACK[k % 4][1] * 40; o.r = 11; }); });
+  return t;
+}
+let ludoRaf = 0;
+function renderLudo() {
+  state.ludoTarget = ludoTargets();
+  if (!state.ludoDisp || REDUCE_MOTION) state.ludoDisp = JSON.parse(JSON.stringify(state.ludoTarget));
+  if (!ludoRaf) ludoRaf = requestAnimationFrame(ludoTick);
+}
+function ludoTick() {
+  ludoRaf = 0;
+  if (!state.ludoDisp || !state.ludoTarget) return;
+  let moving = false;
+  for (const p of seatKeys()) for (let i = 0; i < 4; i++) {
+    const d = state.ludoDisp[p] && state.ludoDisp[p][i], t = state.ludoTarget[p][i]; if (!d) continue;
+    const dx = t.x - d.x, dy = t.y - d.y;
+    if (Math.abs(dx) + Math.abs(dy) > .6) { d.x += dx * .3; d.y += dy * .3; moving = true; } else { d.x = t.x; d.y = t.y; }
+    d.r = t.r;
+  }
+  drawLudo();
+  const choosing = isHumanTurn() && state.ludoHasRolled && !$('ludoWrap').classList.contains('hidden');
+  if (moving || choosing) ludoRaf = requestAnimationFrame(ludoTick);
+}
+function rrect(ctx, x, y, w, h, r) { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); }
+function starPath(ctx, cx, cy, R, r) {
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rad = i % 2 ? r : R; ctx.lineTo(cx + Math.cos(a) * rad, cy + Math.sin(a) * rad); }
+  ctx.closePath();
+}
+function arrowShape(ctx, gx, gy, dir, color) {
+  const cx = gx * 40 + 20, cy = gy * 40 + 20, d = { right: [1, 0], left: [-1, 0], down: [0, 1], up: [0, -1] }[dir], px = -d[1], py = d[0];
+  ctx.beginPath();
+  ctx.moveTo(cx + d[0] * 12, cy + d[1] * 12);
+  ctx.lineTo(cx - d[0] * 8 + px * 10, cy - d[1] * 8 + py * 10);
+  ctx.lineTo(cx - d[0] * 8 - px * 10, cy - d[1] * 8 - py * 10);
+  ctx.closePath(); ctx.fillStyle = color; ctx.fill();
+}
+function drawLudo() {
+  const cv = $('ludoCanvas'); if (!cv || !cv.clientWidth || !state.ludoDisp) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 3), px = Math.round(cv.clientWidth * dpr);
+  if (cv.width !== px) { cv.width = px; cv.height = px; }
+  const ctx = cv.getContext('2d'); if (!ctx) return;
+  const k = px / 600, U = 40, INK = '#1b1b1b';
+  ctx.setTransform(k, 0, 0, k, 0, 0);
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, 600, 600);
+
+  // Croix de cases blanches
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.2;
+  for (let gx = 0; gx < 15; gx++) for (let gy = 0; gy < 15; gy++) {
+    const cross = (gx >= 6 && gx <= 8) !== (gy >= 6 && gy <= 8);
+    if (cross) ctx.strokeRect(gx * U + .6, gy * U + .6, U - 1.2, U - 1.2);
+  }
+  // Couloirs d'arrivée et cases de départ en couleur pleine
+  for (const id of [1, 2, 3, 4]) LUDO_LANE[id].forEach(([gx, gy]) => {
+    ctx.fillStyle = COL[id].main; ctx.fillRect(gx * U, gy * U, U, U); ctx.strokeRect(gx * U + .6, gy * U + .6, U - 1.2, U - 1.2);
+  });
+  for (const y of YARDS) {
+    const [gx, gy] = LUDO_PATH[y.start];
+    ctx.fillStyle = COL[y.id].main; ctx.fillRect(gx * U, gy * U, U, U); ctx.strokeRect(gx * U + .6, gy * U + .6, U - 1.2, U - 1.2);
+  }
+  // Étoiles (cases sûres)
+  L.SAFE.forEach(idx => {
+    if (YARDS.some(y => y.start === idx)) return;
+    const [gx, gy] = LUDO_PATH[idx];
+    starPath(ctx, gx * U + 20, gy * U + 21, 14, 6); ctx.fillStyle = '#fff'; ctx.fill(); ctx.lineWidth = 1.6; ctx.strokeStyle = INK; ctx.stroke();
+  });
+  ctx.lineWidth = 1.2;
+  // Flèches d'entrée
+  ARROWS.forEach(a => arrowShape(ctx, a.x, a.y, a.dir, COL[a.id].main));
+
+  // Camps : grand carré de couleur, carré blanc, quatre ronds
+  for (const y of YARDS) {
+    const c = COL[y.id];
+    ctx.fillStyle = c.main; ctx.fillRect(y.x, y.y, 240, 240);
+    ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.strokeRect(y.x + 1, y.y + 1, 238, 238);
+    ctx.fillStyle = '#fff'; rrect(ctx, y.x + 36, y.y + 36, 168, 168, 8); ctx.fill(); ctx.stroke();
+    for (const [gx, gy] of LUDO_YARD[y.id]) {
+      ctx.beginPath(); ctx.arc(gx * U, gy * U, 24, 0, Math.PI * 2); ctx.fillStyle = c.main; ctx.fill(); ctx.lineWidth = 1.6; ctx.stroke();
+    }
+    const seat = state.ludoSeats.find(s => s && s.c === y.id);
+    if (seat) {
+      ctx.fillStyle = c.ink || '#fff'; ctx.font = '800 14px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(String(seat.name).toUpperCase().slice(0, 14), y.x + 120, y.y + 18);
+    }
+  }
+  // Centre : quatre triangles
+  const tris = [[[240, 240], [240, 360], 3], [[240, 240], [360, 240], 4], [[360, 240], [360, 360], 2], [[240, 360], [360, 360], 1]];
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.6;
+  for (const [a, b, id] of tris) {
+    ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.lineTo(300, 300); ctx.closePath(); ctx.fillStyle = COL[id].main; ctx.fill(); ctx.stroke();
+  }
+  ctx.lineWidth = 3; ctx.strokeRect(1.5, 1.5, 597, 597);
+
+  // Pions : cages inoccupées (décor atténué) puis pions des joueurs
+  const pulse = (Math.sin(performance.now() / 180) + 1) / 2;
+  const legal = isHumanTurn() && state.ludoHasRolled ? legalLudoPawns(state.currentPlayer, state.ludoLastRoll) : [];
+  YARDS.filter(y => !state.ludoSeats.some(s => s && s.c === y.id)).forEach(y => {
+    ctx.globalAlpha = .6; LUDO_YARD[y.id].forEach(([gx, gy], i) => drawPawn(ctx, gx * U, gy * U, 15, COL[y.id], String(i + 1), false, 0)); ctx.globalAlpha = 1;
+  });
+  for (const p of seatKeys()) for (let i = 0; i < 4; i++) {
+    const d = state.ludoDisp[p][i]; drawPawn(ctx, d.x, d.y, d.r, COL[seatOf(p).c], String(i + 1), p === state.currentPlayer && legal.includes(i), pulse);
+  }
+}
+
+function drawPawn(ctx, x, y, r, col, label, legal, pulse) {
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 2;
+  const g = ctx.createRadialGradient(x - r * .35, y - r * .4, r * .1, x, y, r); g.addColorStop(0, col.hi); g.addColorStop(1, col.main);
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = g; ctx.fill();
+  ctx.shadowColor = 'transparent'; ctx.lineWidth = 2.5; ctx.strokeStyle = '#fff'; ctx.stroke();
+  if (legal) { const rr2 = r + 4 + pulse * 3; ctx.beginPath(); ctx.arc(x, y, rr2, 0, Math.PI * 2); ctx.strokeStyle = '#111'; ctx.lineWidth = 6.5; ctx.stroke(); ctx.strokeStyle = '#4ade80'; ctx.lineWidth = 3.5; ctx.stroke(); }
+  if (r >= 11) { ctx.fillStyle = col.ink || '#fff'; ctx.font = `800 ${Math.round(r * .8)}px system-ui,sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, x, y + 1); }
+  ctx.restore();
+}
+$('ludoCanvas').addEventListener('click', e => {
+  if (!isHumanTurn() || !state.ludoHasRolled || !state.ludoDisp) return;
+  const rect = e.currentTarget.getBoundingClientRect();
+  const x = (e.clientX - rect.left) * 600 / rect.width, y = (e.clientY - rect.top) * 600 / rect.height;
+  let best = null, bestD = 38;
+  for (const i of legalLudoPawns(state.currentPlayer, state.ludoLastRoll)) {
+    const d = state.ludoDisp[state.currentPlayer][i], dist = Math.hypot(x - d.x, y - d.y);
+    if (dist < bestD) { best = i; bestD = dist; }
+  }
+  if (best !== null) moveLudoPawn(best);
+});
+if (window.ResizeObserver) new ResizeObserver(() => { if (state.ludoDisp) drawLudo(); }).observe($('ludoCanvas'));
+else window.addEventListener('resize', () => { if (state.ludoDisp) drawLudo(); });
+
+/* =====================================================================
+   ACTIONS (délégation d'événements) & INITIALISATION
+   ===================================================================== */
+const actions = {
+  'show-login': showLoginForm, 'show-register': showRegisterForm, 'continue-local': continueAsLocal, 'logout': logout,
+  'go-home': () => { if (state.gameActive && (state.moneyGame || isOnlineMode())) leaveGame(); else goHome(); },
+  'select-game': el => selectGame(el.dataset.game),
+  'select-mode': el => selectMode(el.dataset.mode), 'select-level': el => selectLevel(el.dataset.level),
+  'select-ptype': el => selectPrivateType(el.dataset.ptype), 'select-otype': el => selectOnlineType(el.dataset.otype),
+  'set-bet': el => setBet(Number(el.dataset.bet)),
+  'create-room': createPrivateRoom, 'join-room': joinPrivateRoom, 'copy-code': copyRoomCode, 'cancel-wait': () => cancelWaiting(),
+  'launch': launchGame, 'leave-game': leaveGame,
+  'open-avatar': openAvatarPicker, 'confirm-avatar': confirmAvatar,
+  'close-modal': el => closeModal(el.dataset.modal),
+  'open-recharge': () => openModal('rechargeModal'), 'recharge': simulatePayment, 'toggle-sound': toggleSound,
+  'roll': rollLudoDice, 'select-camps': el => selectCamps(Number(el.dataset.camps)), 'select-color': el => selectColor(Number(el.dataset.color)), 'select-count': el => selectCount(Number(el.dataset.count)), 'toggle-pw': togglePw, 'pick-pawn': el => humanPickPawn(Number(el.dataset.pawn)),
+  'replay': () => { closeModal('gameOverModal'); relaunchCurrentGame(); },
+  'game-over-home': () => { closeModal('gameOverModal'); goHome(); }
+};
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-action]');
+  if (!el || el.disabled) return;
+  const fn = actions[el.dataset.action]; if (fn) fn(el, e);
+});
+$('loginForm').addEventListener('submit', e => { e.preventDefault(); loginUser(); });
+$('registerForm').addEventListener('submit', e => { e.preventDefault(); registerUser(); });
+$('betInput').addEventListener('input', onBetInput);
+$('roomCodeInput').addEventListener('input', e => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); });
+window.addEventListener('beforeunload', e => { if (state.gameActive && state.moneyGame) { e.preventDefault(); e.returnValue = ''; } });
+
+(function init() {
+  buildDice(); setDiceFace(0);
+  $('soundIcon').className = state.soundEnabled ? 'fa-solid fa-volume-high' : 'fa-solid fa-volume-xmark';
+  const user = getStoredUser();
+  if (user && user.username) { state.player1Name = user.username; hideLoginScreen(); connectSocket(); } else { showLoginScreen(); }
+  updateUserUI(); updateBalance(); updateStats(); updateSetupUI(); showScreen('home');
+})();
+</script>
+</body>
+</html>
